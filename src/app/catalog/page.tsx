@@ -6,27 +6,21 @@ import ProductCard from '@/components/ProductCard';
 import { Product } from '@/types';
 import { CATEGORIES } from '@/lib/categories';
 import { Suspense } from 'react';
+import productsData from '@/lib/data/products.json';
 
 function CatalogContent() {
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState(searchParams.get('category') || '');
   const [sort, setSort] = useState('name');
   const [search, setSearch] = useState('');
   const [priceMax, setPriceMax] = useState(50000);
 
+  const products = productsData as unknown as Product[];
+
   useEffect(() => {
     const cat = searchParams.get('category') || '';
     setCategory(cat);
   }, [searchParams]);
-
-  useEffect(() => {
-    fetch('/api/products')
-      .then((r) => r.json())
-      .then((data) => { setProducts(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
 
   const filtered = products
     .filter((p) => !category || p.category === category)
@@ -135,9 +129,7 @@ function CatalogContent() {
         <div className="flex-1">
           {/* Toolbar */}
           <div className="flex items-center justify-between mb-6">
-            <span className="text-gray-500 text-sm">
-              {loading ? 'טוען...' : `${filtered.length} מוצרים`}
-            </span>
+            <span className="text-gray-500 text-sm">{filtered.length} מוצרים</span>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
@@ -149,13 +141,7 @@ function CatalogContent() {
             </select>
           </div>
 
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-gray-100 rounded-2xl h-80 animate-pulse" />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="text-center py-20 text-gray-500">
               <div className="text-5xl mb-4">🔍</div>
               <p className="font-medium text-lg">לא נמצאו מוצרים</p>
