@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>וֶלוֹ סיטי – חנות אופניים</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --orange: #ff6b00;
+      --dark:   #0d0d0d;
+      --light:  #f5f5f5;
+      --gray:   #888;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: var(--dark);
+      color: var(--light);
+      overflow-x: hidden;
+    }
+
+    /* ── SCENE WRAPPER ─────────────────────────────────────── */
+    .scene {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SCENE 1 – HERO
+    ══════════════════════════════════════════════════════════ */
+    #hero {
+      background: radial-gradient(ellipse at 60% 50%, #1a1a1a 0%, #000 100%);
+      flex-direction: column;
+      text-align: center;
+    }
+
+    /* animated grid lines */
+    #hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,107,0,.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,107,0,.08) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridMove 8s linear infinite;
+    }
+    @keyframes gridMove {
+      0%   { background-position: 0 0, 0 0; }
+      100% { background-position: 0 60px, 60px 0; }
+    }
+
+    .hero-badge {
+      font-size: .85rem;
+      font-weight: 700;
+      letter-spacing: .25em;
+      text-transform: uppercase;
+      color: var(--orange);
+      border: 1px solid var(--orange);
+      padding: .35em 1.2em;
+      border-radius: 2em;
+      margin-bottom: 1.6rem;
+      opacity: 0;
+      animation: fadeUp .8s .3s forwards;
+    }
+
+    .hero-title {
+      font-size: clamp(3.5rem, 9vw, 8rem);
+      font-weight: 900;
+      line-height: 1;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-title span { color: var(--orange); }
+
+    .hero-title .word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(60px);
+    }
+    .hero-title .word:nth-child(1) { animation: fadeUp .7s .6s forwards; }
+    .hero-title .word:nth-child(2) { animation: fadeUp .7s .9s forwards; }
+    .hero-title .word:nth-child(3) { animation: fadeUp .7s 1.2s forwards; }
+
+    .hero-sub {
+      margin-top: 1.2rem;
+      font-size: clamp(1rem, 2vw, 1.4rem);
+      font-weight: 300;
+      color: var(--gray);
+      opacity: 0;
+      animation: fadeUp .7s 1.6s forwards;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-cta {
+      margin-top: 2.4rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      opacity: 0;
+      animation: fadeUp .7s 2s forwards;
+      position: relative;
+      z-index: 1;
+    }
+    .btn-primary {
+      background: var(--orange);
+      color: #fff;
+      border: none;
+      padding: .85em 2.2em;
+      border-radius: 2em;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+      font-family: inherit;
+    }
+    .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(255,107,0,.45); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--light);
+      border: 1px solid rgba(255,255,255,.3);
+      padding: .85em 2.2em;
+      border-radius: 2em;
+      font-size: 1rem;
+      font-weight: 400;
+      cursor: pointer;
+      transition: border-color .2s, color .2s;
+      font-family: inherit;
+    }
+    .btn-ghost:hover { border-color: var(--orange); color: var(--orange); }
+
+    /* big SVG bike background */
+    .bike-bg {
+      position: absolute;
+      bottom: -4%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(820px, 95vw);
+      opacity: 0;
+      animation: bikeReveal 1.2s 1.8s cubic-bezier(.22,1,.36,1) forwards;
+    }
+    @keyframes bikeReveal {
+      from { opacity: 0; transform: translateX(-50%) scale(.8) translateY(60px); }
+      to   { opacity: .12; transform: translateX(-50%) scale(1) translateY(0); }
+    }
+
+    /* wheel spin on hover */
+    .wheel { transform-origin: center; }
+    .bike-bg:hover .wheel { animation: spin 1.5s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══════════════════════════════════════════════════════════
+       SCENE 2 – STATS BAR
+    ══════════════════════════════════════════════════════════ */
+    #stats {
+      background: var(--orange);
+      min-height: unset;
+      padding: 2.5rem 2rem;
+    }
+    .stats-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem 3rem;
+      justify-content: center;
+      width: 100%;
+      max-width: 900px;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: .9rem;
+      font-weight: 400;
+      color: rgba(255,255,255,.75);
+      margin-top: .3rem;
+    }
+
+    /* count-up animation driven by JS */
+    .stat-num[data-target] { counter-reset: none; }
+
+    /* ══════════════════════════════════════════════════════════
+       SCENE 3 – PRODUCTS
+    ══════════════════════════════════════════════════════════ */
+    #products {
+      flex-direction: column;
+      padding: 6rem 2rem;
+      background: #111;
+    }
+
+    .section-eyebrow {
+      font-size: .8rem;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: .8rem;
+    }
+    .section-title {
+      font-size: clamp(2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 3.5rem;
+      line-height: 1.1;
+    }
+    .section-title span { color: var(--orange); }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #222;
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform .3s, border-color .3s;
+      cursor: pointer;
+    }
+    .card:hover { transform: translateY(-8px); border-color: var(--orange); }
+
+    .card-art {
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5rem;
+      background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+      position: relative;
+      overflow: hidden;
+    }
+    .card-art::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 70% 30%, rgba(255,107,0,.15), transparent 60%);
+    }
+
+    .card-body { padding: 1.4rem 1.6rem; }
+    .card-tag {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: .4rem;
+    }
+    .card-name { font-size: 1.25rem; font-weight: 700; margin-bottom: .4rem; }
+    .card-desc { font-size: .88rem; color: var(--gray); line-height: 1.55; }
+    .card-price {
+      margin-top: 1rem;
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--orange);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SCENE 4 – FEATURES
+    ══════════════════════════════════════════════════════════ */
+    #features {
+      flex-direction: column;
+      padding: 6rem 2rem;
+      background: radial-gradient(ellipse at 30% 60%, #1a0900 0%, #0d0d0d 70%);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
+      max-width: 1000px;
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    .feat {
+      text-align: center;
+      padding: 2.4rem 1.6rem;
+      border-radius: 16px;
+      border: 1px solid #222;
+      transition: border-color .3s, background .3s;
+    }
+    .feat:hover { border-color: var(--orange); background: rgba(255,107,0,.05); }
+
+    .feat-icon { font-size: 2.8rem; margin-bottom: 1rem; display: block; }
+    .feat-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .5rem; }
+    .feat-text { font-size: .88rem; color: var(--gray); line-height: 1.6; }
+
+    /* ══════════════════════════════════════════════════════════
+       SCENE 5 – TESTIMONIALS
+    ══════════════════════════════════════════════════════════ */
+    #testimonials {
+      flex-direction: column;
+      padding: 6rem 2rem;
+      background: #111;
+    }
+
+    .testimonials-track {
+      display: flex;
+      gap: 1.5rem;
+      max-width: 1100px;
+      width: 100%;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .testi {
+      background: #1a1a1a;
+      border: 1px solid #222;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 320px;
+      flex: 1 1 260px;
+      transition: border-color .3s;
+    }
+    .testi:hover { border-color: var(--orange); }
+
+    .stars { color: var(--orange); font-size: 1.1rem; margin-bottom: .8rem; }
+    .testi-text { font-size: .95rem; line-height: 1.65; color: #ccc; margin-bottom: 1.2rem; }
+    .testi-author { font-weight: 700; font-size: .9rem; }
+    .testi-role { font-size: .8rem; color: var(--gray); }
+
+    /* ══════════════════════════════════════════════════════════
+       SCENE 6 – CTA FINALE
+    ══════════════════════════════════════════════════════════ */
+    #cta-finale {
+      flex-direction: column;
+      text-align: center;
+      padding: 8rem 2rem;
+      background: radial-gradient(ellipse at 50% 40%, #1a0900 0%, #000 70%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* animated rings */
+    .ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(255,107,0,.15);
+      animation: expandRing 4s ease-out infinite;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .ring:nth-child(1) { width: 300px; height: 300px; animation-delay: 0s; }
+    .ring:nth-child(2) { width: 500px; height: 500px; animation-delay: .8s; }
+    .ring:nth-child(3) { width: 700px; height: 700px; animation-delay: 1.6s; }
+    .ring:nth-child(4) { width: 900px; height: 900px; animation-delay: 2.4s; }
+    @keyframes expandRing {
+      0%   { opacity: .6; transform: translate(-50%,-50%) scale(.6); }
+      100% { opacity: 0;  transform: translate(-50%,-50%) scale(1.4); }
+    }
+
+    .finale-title {
+      font-size: clamp(2.5rem, 7vw, 6rem);
+      font-weight: 900;
+      line-height: 1.05;
+      position: relative;
+      z-index: 1;
+    }
+    .finale-title span { color: var(--orange); }
+
+    .finale-sub {
+      margin-top: 1.2rem;
+      font-size: 1.1rem;
+      color: var(--gray);
+      max-width: 500px;
+      line-height: 1.6;
+      position: relative;
+      z-index: 1;
+    }
+
+    .finale-cta {
+      margin-top: 2.5rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* contact chips */
+    .contact-chips {
+      display: flex;
+      gap: .8rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+    .chip {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 2em;
+      padding: .5em 1.2em;
+      font-size: .9rem;
+      display: flex;
+      align-items: center;
+      gap: .5em;
+    }
+    .chip-icon { font-size: 1rem; }
+
+    /* ── FOOTER ─── */
+    footer {
+      background: #000;
+      text-align: center;
+      padding: 1.5rem;
+      font-size: .8rem;
+      color: #444;
+      border-top: 1px solid #1a1a1a;
+    }
+
+    /* ── SCROLL REVEAL ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+
+    /* ── HELPERS ─── */
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 3px; }
+
+    /* nav dot progress */
+    .nav-dots {
+      position: fixed;
+      right: 1.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: .7rem;
+      z-index: 100;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.2);
+      cursor: pointer;
+      transition: background .3s, transform .3s;
+    }
+    .dot.active { background: var(--orange); transform: scale(1.5); }
+
+    /* mobile tweaks */
+    @media (max-width: 500px) {
+      .nav-dots { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- nav dots -->
+<nav class="nav-dots" id="navDots">
+  <div class="dot active" onclick="scrollTo('#hero')"></div>
+  <div class="dot" onclick="scrollTo('#stats')"></div>
+  <div class="dot" onclick="scrollTo('#products')"></div>
+  <div class="dot" onclick="scrollTo('#features')"></div>
+  <div class="dot" onclick="scrollTo('#testimonials')"></div>
+  <div class="dot" onclick="scrollTo('#cta-finale')"></div>
+</nav>
+
+<!-- ══ SCENE 1 – HERO ══════════════════════════════════════ -->
+<section class="scene" id="hero">
+  <div class="hero-badge">חנות אופניים מקצועית</div>
+
+  <h1 class="hero-title">
+    <span class="word">וֶלוֹ</span>&nbsp;
+    <span class="word"><span>סיטי</span></span>&nbsp;
+    <span class="word">🚴</span>
+  </h1>
+
+  <p class="hero-sub">איכות גבוהה · שירות אישי · נסיעה שמחה</p>
+
+  <div class="hero-cta">
+    <button class="btn-primary" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">גלה את האופניים</button>
+    <button class="btn-ghost"   onclick="document.getElementById('cta-finale').scrollIntoView({behavior:'smooth'})">צור קשר</button>
+  </div>
+
+  <!-- big decorative SVG bike -->
+  <svg class="bike-bg" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <!-- rear wheel -->
+    <circle class="wheel" cx="100" cy="160" r="55" fill="none" stroke="#ff6b00" stroke-width="5"/>
+    <circle cx="100" cy="160" r="8" fill="#ff6b00"/>
+    <!-- spokes rear -->
+    <line x1="100" y1="105" x2="100" y2="215" stroke="#ff6b00" stroke-width="2" opacity=".5"/>
+    <line x1="45"  y1="160" x2="155" y2="160" stroke="#ff6b00" stroke-width="2" opacity=".5"/>
+    <line x1="61"  y1="121" x2="139" y2="199" stroke="#ff6b00" stroke-width="2" opacity=".5"/>
+    <line x1="139" y1="121" x2="61"  y2="199" stroke="#ff6b00" stroke-width="2" opacity=".5"/>
+
+    <!-- front wheel -->
+    <circle class="wheel" cx="300" cy="160" r="55" fill="none" stroke="#ff6b00" stroke-width="5"/>
+    <circle cx="300" cy="160" r="8" fill="#ff6b00"/>
+    <!-- spokes front -->
+    <line x1="300" y1="105" x2="300" y2="215" stroke="#ff6b00" stroke-width="2" opacity=".5"/>
+    <line x1="245" y1="160" x2="355" y2="160" stroke="#ff6b00" stroke-width="2" opacity=".5"/>
+    <line x1="261" y1="121" x2="339" y2="199" stroke="#ff6b00" stroke-width="2" opacity=".5"/>
+    <line x1="339" y1="121" x2="261" y2="199" stroke="#ff6b00" stroke-width="2" opacity=".5"/>
+
+    <!-- frame -->
+    <polyline points="100,160 140,80 220,80" fill="none" stroke="#ff6b00" stroke-width="6" stroke-linejoin="round"/>
+    <line x1="140" y1="80"  x2="175" y2="160" stroke="#ff6b00" stroke-width="6"/>
+    <line x1="175" y1="160" x2="100" y2="160" stroke="#ff6b00" stroke-width="6"/>
+    <line x1="175" y1="160" x2="300" y2="160" stroke="#ff6b00" stroke-width="6"/>
+    <!-- fork -->
+    <line x1="220" y1="80"  x2="300" y2="160" stroke="#ff6b00" stroke-width="6"/>
+    <!-- top tube -->
+    <line x1="220" y1="80"  x2="270" y2="60"  stroke="#ff6b00" stroke-width="4"/>
+    <!-- seat post -->
+    <line x1="175" y1="160" x2="155" y2="90"  stroke="#ff6b00" stroke-width="5"/>
+    <line x1="145" y1="90"  x2="165" y2="90"  stroke="#ff6b00" stroke-width="4"/>
+    <!-- handlebar -->
+    <line x1="270" y1="60"  x2="260" y2="40"  stroke="#ff6b00" stroke-width="4"/>
+    <line x1="252" y1="40"  x2="268" y2="40"  stroke="#ff6b00" stroke-width="5" stroke-linecap="round"/>
+    <!-- crank -->
+    <circle cx="175" cy="160" r="12" fill="none" stroke="#ff6b00" stroke-width="3"/>
+    <line x1="175" y1="148" x2="188" y2="155" stroke="#ff6b00" stroke-width="3" stroke-linecap="round"/>
+    <line x1="175" y1="172" x2="162" y2="165" stroke="#ff6b00" stroke-width="3" stroke-linecap="round"/>
+  </svg>
+</section>
+
+<!-- ══ SCENE 2 – STATS ══════════════════════════════════════ -->
+<section class="scene" id="stats">
+  <div class="stats-grid">
+    <div class="stat-item reveal">
+      <div class="stat-num" data-target="500">0</div>
+      <div class="stat-label">סוגי אופניים במלאי</div>
+    </div>
+    <div class="stat-item reveal">
+      <div class="stat-num" data-target="15">0</div>
+      <div class="stat-label">שנות ניסיון</div>
+    </div>
+    <div class="stat-item reveal">
+      <div class="stat-num" data-target="12000">0</div>
+      <div class="stat-label">לקוחות מרוצים</div>
+    </div>
+    <div class="stat-item reveal">
+      <div class="stat-num" data-target="98">0</div>
+      <div class="stat-label">% שביעות רצון</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SCENE 3 – PRODUCTS ═══════════════════════════════════ -->
+<section class="scene" id="products">
+  <p class="section-eyebrow reveal">הקטלוג שלנו</p>
+  <h2 class="section-title reveal">אופניים לכל <span>הרפתקה</span></h2>
+
+  <div class="cards">
+    <div class="card reveal">
+      <div class="card-art">🚵</div>
+      <div class="card-body">
+        <div class="card-tag">שטח</div>
+        <div class="card-name">Trail Master X9</div>
+        <div class="card-desc">סיבי קרבון, 29 אינץ', בקרת שיפוע אוטומטית – לרכיבה קיצונית בשטח</div>
+        <div class="card-price">₪4,990</div>
+      </div>
+    </div>
+    <div class="card reveal">
+      <div class="card-art">🚴</div>
+      <div class="card-body">
+        <div class="card-tag">כביש</div>
+        <div class="card-name">VeloCity Pro</div>
+        <div class="card-desc">מסגרת אלומיניום קלה, 21 הילוכים, מושלם לאתגרי שגרה ותחרויות</div>
+        <div class="card-price">₪3,290</div>
+      </div>
+    </div>
+    <div class="card reveal">
+      <div class="card-art">🏙️</div>
+      <div class="card-body">
+        <div class="card-tag">עיר</div>
+        <div class="card-name">Urban Glide E</div>
+        <div class="card-desc">אופניים חשמליים חכמים, מנוע 250W, סוללה לטווח 80 ק"מ</div>
+        <div class="card-price">₪7,490</div>
+      </div>
+    </div>
+    <div class="card reveal">
+      <div class="card-art">👨‍👩‍👧</div>
+      <div class="card-body">
+        <div class="card-tag">משפחה</div>
+        <div class="card-name">Family Fun</div>
+        <div class="card-desc">אופניים ילדים ונוער, צבעוני ובטיחותי, עם גלגלי עזר נשלפים</div>
+        <div class="card-price">₪990</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SCENE 4 – FEATURES ═══════════════════════════════════ -->
+<section class="scene" id="features">
+  <p class="section-eyebrow reveal">למה לבחור בנו?</p>
+  <h2 class="section-title reveal">הבדל <span>אמיתי</span></h2>
+
+  <div class="features-grid">
+    <div class="feat reveal">
+      <span class="feat-icon">🔧</span>
+      <div class="feat-title">תיקון ביום עסקים</div>
+      <div class="feat-text">מוסך מאובזר עם טכנאים מוסמכים – רוב התיקונים מוחזרים תוך 24 שעות</div>
+    </div>
+    <div class="feat reveal">
+      <span class="feat-icon">🛡️</span>
+      <div class="feat-title">אחריות מורחבת</div>
+      <div class="feat-text">שנתיים אחריות מלאה על מסגרת וחלפים, בשירות מקצועי ואמין</div>
+    </div>
+    <div class="feat reveal">
+      <span class="feat-icon">📦</span>
+      <div class="feat-title">משלוח חינם</div>
+      <div class="feat-text">הזמנות מעל ₪500 – משלוח חינם עד הבית בתוך 3 ימי עסקים</div>
+    </div>
+    <div class="feat reveal">
+      <span class="feat-icon">💳</span>
+      <div class="feat-title">תשלומים גמישים</div>
+      <div class="feat-text">עד 36 תשלומים ללא ריבית, השכרת אופניים יומית ושבועית</div>
+    </div>
+    <div class="feat reveal">
+      <span class="feat-icon">🧑‍🏫</span>
+      <div class="feat-title">ייעוץ אישי</div>
+      <div class="feat-text">צוות מומחים שיעזור לכם למצוא בדיוק את האופניים המתאימים לכם</div>
+    </div>
+    <div class="feat reveal">
+      <span class="feat-icon">🌿</span>
+      <div class="feat-title">ירוק ומחויב</div>
+      <div class="feat-text">לכל אופניים שנמכר, אנחנו שותלים עץ בשיתוף עם עמותת אפיק</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SCENE 5 – TESTIMONIALS ══════════════════════════════ -->
+<section class="scene" id="testimonials">
+  <p class="section-eyebrow reveal">לקוחות מדברים</p>
+  <h2 class="section-title reveal">הם <span>רכבו</span>, הם ממליצים</h2>
+
+  <div class="testimonials-track">
+    <div class="testi reveal">
+      <div class="stars">★★★★★</div>
+      <p class="testi-text">"קניתי כאן את האופניים הראשונים שלי לשטח. הצוות עזר לי לבחור בדיוק את הגודל הנכון, ועשרה חודשים אחר כך – אני מרוצה בטירוף!"</p>
+      <div class="testi-author">דניאל כהן</div>
+      <div class="testi-role">רוכב שטח, תל אביב</div>
+    </div>
+    <div class="testi reveal">
+      <div class="stars">★★★★★</div>
+      <p class="testi-text">"האופניים החשמליים שרכשנו פה הפכו את הנסיעה לעבודה לחוויה. שירות מדהים, מחיר הוגן ומשלוח מהיר."</p>
+      <div class="testi-author">מיכל לוי</div>
+      <div class="testi-role">מהנדסת תוכנה, הרצליה</div>
+    </div>
+    <div class="testi reveal">
+      <div class="stars">★★★★★</div>
+      <p class="testi-text">"הבאתי את האופניים לתיקון יום לפני טיול. החזירו לי אותם תוך שעות, מקצועי להפליא. לא אלך לשום מקום אחר."</p>
+      <div class="testi-author">אורי שפירא</div>
+      <div class="testi-role">מדריך אופניים, ירושלים</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SCENE 6 – CTA FINALE ════════════════════════════════ -->
+<section class="scene" id="cta-finale">
+  <div class="ring"></div>
+  <div class="ring"></div>
+  <div class="ring"></div>
+  <div class="ring"></div>
+
+  <h2 class="finale-title reveal">מוכנים<br><span>לרכוב?</span></h2>
+  <p class="finale-sub reveal">בואו אלינו לחנות, דברו איתנו, או הזמינו באונליין – אנחנו כאן בשבילכם.</p>
+
+  <div class="finale-cta reveal">
+    <button class="btn-primary">📞 &nbsp;התקשר עכשיו</button>
+    <button class="btn-ghost">🗺️ &nbsp;מצא אותנו</button>
+  </div>
+
+  <div class="contact-chips reveal">
+    <div class="chip"><span class="chip-icon">📍</span> רחוב הרצל 14, תל אביב</div>
+    <div class="chip"><span class="chip-icon">📞</span> 03-555-0198</div>
+    <div class="chip"><span class="chip-icon">🕐</span> א–ה 09:00–19:00 | ו 09:00–14:00</div>
+  </div>
+</section>
+
+<footer>© 2025 וֶלוֹ סיטי – כל הזכויות שמורות · עוצב עם ❤️ לאוהבי הדרך</footer>
+
+<!-- ══ JAVASCRIPT ══════════════════════════════════════════ -->
+<script>
+// ─── Scroll Reveal ────────────────────────────────────────
+const revealObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      revealObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+// ─── Count-up ────────────────────────────────────────────
+function animateCount(el, target, duration = 1600) {
+  let start = 0;
+  const step = (timestamp) => {
+    if (!start) start = timestamp;
+    const progress = Math.min((timestamp - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.floor(eased * target).toLocaleString('he-IL');
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+const countObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const target = parseInt(e.target.dataset.target, 10);
+      animateCount(e.target, target);
+      countObs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('[data-target]').forEach(el => countObs.observe(el));
+
+// ─── Nav dots active state ────────────────────────────────
+const sections = ['#hero','#stats','#products','#features','#testimonials','#cta-finale'];
+const dots = document.querySelectorAll('.dot');
+
+const sectionObs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const idx = sections.indexOf('#' + e.target.id);
+      if (idx !== -1) {
+        dots.forEach(d => d.classList.remove('active'));
+        dots[idx].classList.add('active');
+      }
+    }
+  });
+}, { threshold: 0.4 });
+
+sections.forEach(s => {
+  const el = document.querySelector(s);
+  if (el) sectionObs.observe(el);
+});
+
+// ─── dot click helper ─────────────────────────────────────
+function scrollTo(selector) {
+  document.querySelector(selector)?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ─── Parallax tilt on hero bg bike ───────────────────────
+const bikeBg = document.querySelector('.bike-bg');
+if (bikeBg) {
+  document.addEventListener('mousemove', (e) => {
+    const dx = (e.clientX / window.innerWidth  - .5) * 18;
+    const dy = (e.clientY / window.innerHeight - .5) * 10;
+    bikeBg.style.transform = `translateX(calc(-50% + ${dx}px)) translateY(${dy}px)`;
+  });
+}
+</script>
+</body>
+</html>
