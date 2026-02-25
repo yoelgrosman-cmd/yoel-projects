@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BILU BIKES – חנות אופניים מקצועית</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Segoe UI','Arial Hebrew',Arial,sans-serif; background:#f8fafc; direction:rtl; }
+  .hero-gradient { background: linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0369a1 100%); }
+  .product-card { transition: transform .2s ease,box-shadow .2s ease; }
+  .product-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,.12); }
+  .page { display:none; }
+  .page.active { display:block; }
+  .cart-sidebar { transform:translateX(100%); transition:.3s; }
+  .cart-sidebar.open { transform:translateX(0); }
+  .overlay { display:none; }
+  .overlay.active { display:block; }
+  .animate-pulse-dot { animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+  ::-webkit-scrollbar{width:6px} ::-webkit-scrollbar-track{background:#f1f5f9} ::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- OVERLAY -->
+<div id="overlay" class="overlay fixed inset-0 bg-black/50 z-40" onclick="closeCart()"></div>
+
+<!-- CART SIDEBAR -->
+<div id="cart" class="cart-sidebar fixed top-0 left-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
+  <div class="flex items-center justify-between p-5 border-b border-gray-100">
+    <h2 class="text-xl font-black text-gray-800">🛒 עגלת הקניות</h2>
+    <button onclick="closeCart()" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">✕</button>
+  </div>
+  <div id="cart-items" class="flex-1 overflow-y-auto p-5 space-y-3"></div>
+  <div class="border-t border-gray-100 p-5">
+    <div class="flex justify-between items-center mb-4">
+      <span class="font-medium text-gray-600">סה"כ:</span>
+      <span id="cart-total" class="text-2xl font-black text-blue-900">₪0</span>
+    </div>
+    <button onclick="alert('🎉 ההזמנה הושלמה! תודה שקנית ב-BILU BIKES')" class="w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-lg transition-colors">לתשלום</button>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="bg-blue-950 text-white text-xs sm:text-sm py-2">
+  <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
+    <div class="flex gap-4 sm:gap-6">
+      <span>📞 03-1234567</span>
+      <span>✉️ info@bilubikes.co.il</span>
+    </div>
+    <div class="hidden sm:flex gap-4">
+      <span>משלוח חינם מעל ₪299</span>
+      <span>|</span>
+      <span>א׳-ה׳ 10:00-19:00</span>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex items-center justify-between h-20">
+      <button onclick="nav('home')" class="flex items-center gap-2 group">
+        <div class="w-12 h-12 bg-blue-900 rounded-full flex items-center justify-center text-white font-bold text-lg group-hover:bg-orange-500 transition-colors">BB</div>
+        <div>
+          <div class="text-xl font-black text-blue-900 tracking-tight">BILU BIKES</div>
+          <div class="text-xs text-gray-500">חנות אופניים מקצועית</div>
+        </div>
+      </button>
+      <nav class="hidden lg:flex items-center gap-1">
+        <button onclick="nav('home')" class="px-4 py-2 text-gray-700 hover:text-blue-900 hover:bg-blue-50 rounded-lg font-medium transition-colors">ראשי</button>
+        <button onclick="nav('catalog')" class="px-4 py-2 text-gray-700 hover:text-blue-900 hover:bg-blue-50 rounded-lg font-medium transition-colors">קטלוג</button>
+        <button onclick="nav('about')" class="px-4 py-2 text-gray-700 hover:text-blue-900 hover:bg-blue-50 rounded-lg font-medium transition-colors">אודות</button>
+        <button onclick="nav('contact')" class="px-4 py-2 text-gray-700 hover:text-blue-900 hover:bg-blue-50 rounded-lg font-medium transition-colors">צור קשר</button>
+      </nav>
+      <button onclick="openCart()" class="relative flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl font-medium transition-colors">
+        🛒 <span class="hidden sm:inline">עגלה</span>
+        <span id="cart-badge" class="hidden absolute -top-2 -left-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════ HOME PAGE ═══════════════ -->
+<div id="page-home" class="page active">
+  <!-- Hero -->
+  <section class="hero-gradient text-white relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+      <div class="absolute top-10 right-10 w-64 h-64 border-4 border-white rounded-full"></div>
+      <div class="absolute bottom-10 left-10 w-48 h-48 border-4 border-white rounded-full"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 border-2 border-orange-400 rounded-full"></div>
+    </div>
+    <div class="max-w-7xl mx-auto px-4 py-24 relative">
+      <div class="max-w-2xl">
+        <div class="inline-flex items-center gap-2 bg-orange-500/20 border border-orange-400/30 rounded-full px-4 py-1.5 text-sm text-orange-300 mb-6">
+          <span class="w-2 h-2 bg-orange-400 rounded-full animate-pulse-dot inline-block"></span>
+          מבצע קיץ – עד 30% הנחה!
+        </div>
+        <h1 class="text-4xl md:text-6xl font-black leading-tight mb-6">האופניים שלך<br/><span class="text-orange-400">מחכים לך</span></h1>
+        <p class="text-lg text-blue-200 mb-8 leading-relaxed">מבחר ענק של אופני הרים, כביש, חשמליים ואביזרים. שירות מקצועי, מחירים תחרותיים ומשלוח מהיר לכל הארץ.</p>
+        <div class="flex flex-wrap gap-4">
+          <button onclick="nav('catalog')" class="px-8 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-lg transition-all hover:scale-105 shadow-lg">לקטלוג המוצרים</button>
+          <button onclick="nav('contact')" class="px-8 py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-lg border border-white/20 transition-all hover:scale-105">צור קשר</button>
+        </div>
+      </div>
+    </div>
+    <div class="border-t border-white/10 bg-black/20">
+      <div class="max-w-7xl mx-auto px-4 py-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <div><div class="text-2xl md:text-3xl font-black text-orange-400">500+</div><div class="text-blue-300 text-sm mt-1">מוצרים במלאי</div></div>
+          <div><div class="text-2xl md:text-3xl font-black text-orange-400">15+</div><div class="text-blue-300 text-sm mt-1">שנות ניסיון</div></div>
+          <div><div class="text-2xl md:text-3xl font-black text-orange-400">10,000+</div><div class="text-blue-300 text-sm mt-1">לקוחות מרוצים</div></div>
+          <div><div class="text-2xl md:text-3xl font-black text-orange-400">24h</div><div class="text-blue-300 text-sm mt-1">שירות לקוחות</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories -->
+  <section class="max-w-7xl mx-auto px-4 py-16">
+    <div class="flex items-center justify-between mb-8">
+      <div><h2 class="text-3xl font-black text-blue-900">קטגוריות</h2><p class="text-gray-500 mt-1">מצא את האופניים המושלמים עבורך</p></div>
+      <button onclick="nav('catalog')" class="text-orange-500 hover:text-orange-600 font-medium">כל הקטגוריות ←</button>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <button onclick="navCat('mountain')" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-600 to-emerald-800 text-white p-6 text-center hover:scale-105 transition-all shadow-md">
+        <div class="text-4xl mb-2">⛰️</div><div class="font-bold">אופני הרים</div>
+      </button>
+      <button onclick="navCat('road')" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 text-center hover:scale-105 transition-all shadow-md">
+        <div class="text-4xl mb-2">🚴</div><div class="font-bold">אופני כביש</div>
+      </button>
+      <button onclick="navCat('electric')" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500 to-orange-600 text-white p-6 text-center hover:scale-105 transition-all shadow-md">
+        <div class="text-4xl mb-2">⚡</div><div class="font-bold">חשמליים</div>
+      </button>
+      <button onclick="navCat('city')" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-800 text-white p-6 text-center hover:scale-105 transition-all shadow-md">
+        <div class="text-4xl mb-2">🏙️</div><div class="font-bold">אופני עיר</div>
+      </button>
+      <button onclick="navCat('kids')" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 text-white p-6 text-center hover:scale-105 transition-all shadow-md">
+        <div class="text-4xl mb-2">👦</div><div class="font-bold">ילדים</div>
+      </button>
+      <button onclick="navCat('accessories')" class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-600 to-gray-800 text-white p-6 text-center hover:scale-105 transition-all shadow-md">
+        <div class="text-4xl mb-2">🔧</div><div class="font-bold">אביזרים</div>
+      </button>
+    </div>
+  </section>
+
+  <!-- Featured Products -->
+  <section class="max-w-7xl mx-auto px-4 pb-16">
+    <div class="flex items-center justify-between mb-8">
+      <div><h2 class="text-3xl font-black text-blue-900">מוצרים מומלצים</h2><p class="text-gray-500 mt-1">הבחירות הטובות ביותר שלנו</p></div>
+      <button onclick="nav('catalog')" class="text-orange-500 hover:text-orange-600 font-medium">כל המוצרים ←</button>
+    </div>
+    <div id="featured-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </section>
+
+  <!-- Features -->
+  <section class="bg-blue-950 text-white py-16">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div><div class="text-4xl mb-3">🚚</div><div class="font-bold mb-1">משלוח חינם</div><div class="text-blue-300 text-sm">מעל ₪299</div></div>
+        <div><div class="text-4xl mb-3">↩️</div><div class="font-bold mb-1">החזרה תוך 30 יום</div><div class="text-blue-300 text-sm">ללא שאלות</div></div>
+        <div><div class="text-4xl mb-3">🛡️</div><div class="font-bold mb-1">אחריות יצרן</div><div class="text-blue-300 text-sm">על כל המוצרים</div></div>
+        <div><div class="text-4xl mb-3">💳</div><div class="font-bold mb-1">תשלום מאובטח</div><div class="text-blue-300 text-sm">SSL מוגן</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Newsletter -->
+  <section class="max-w-2xl mx-auto px-4 py-16 text-center">
+    <h2 class="text-2xl font-black text-blue-900 mb-2">הישאר מעודכן</h2>
+    <p class="text-gray-500 mb-6">קבל מבצעים ועדכונים ישירות למייל</p>
+    <div class="flex gap-3">
+      <input type="email" placeholder="האימייל שלך" class="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+      <button onclick="alert('נרשמת בהצלחה! 🎉')" class="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition-colors">הרשמה</button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-blue-950 text-white py-12">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-blue-800">
+        <div>
+          <div class="flex items-center gap-2 mb-4"><div class="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center font-bold">BB</div><div><div class="font-black">BILU BIKES</div><div class="text-xs text-blue-300">חנות אופניים מקצועית</div></div></div>
+          <p class="text-blue-300 text-sm leading-relaxed">חנות האופניים המובילה בישראל. מבחר ענק עם שירות מקצועי.</p>
+        </div>
+        <div>
+          <h3 class="font-bold mb-4">קטגוריות</h3>
+          <ul class="space-y-2 text-blue-300 text-sm">
+            <li><button onclick="navCat('mountain')" class="hover:text-orange-400 transition-colors">אופני הרים</button></li>
+            <li><button onclick="navCat('road')" class="hover:text-orange-400 transition-colors">אופני כביש</button></li>
+            <li><button onclick="navCat('electric')" class="hover:text-orange-400 transition-colors">חשמליים</button></li>
+            <li><button onclick="navCat('city')" class="hover:text-orange-400 transition-colors">אופני עיר</button></li>
+            <li><button onclick="navCat('accessories')" class="hover:text-orange-400 transition-colors">אביזרים</button></li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-bold mb-4">שירות לקוחות</h3>
+          <ul class="space-y-2 text-blue-300 text-sm">
+            <li><button onclick="nav('about')" class="hover:text-orange-400 transition-colors">אודות</button></li>
+            <li><button onclick="nav('contact')" class="hover:text-orange-400 transition-colors">צור קשר</button></li>
+            <li><span>מדיניות החזרות</span></li>
+            <li><span>אחריות ושירות</span></li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-bold mb-4">צור קשר</h3>
+          <ul class="space-y-2 text-blue-300 text-sm">
+            <li>📍 רחוב הרצל 42, תל אביב</li>
+            <li>📞 03-1234567</li>
+            <li>✉️ info@bilubikes.co.il</li>
+            <li>🕐 א׳-ה׳ 10:00-19:00, ו׳ 10:00-14:00</li>
+          </ul>
+        </div>
+      </div>
+      <div class="pt-6 text-center text-blue-400 text-sm">© 2025 BILU BIKES. כל הזכויות שמורות.</div>
+    </div>
+  </footer>
+</div>
+
+<!-- ═══════════════ CATALOG PAGE ═══════════════ -->
+<div id="page-catalog" class="page">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <nav class="text-sm text-gray-500 mb-6 flex items-center gap-2">
+      <button onclick="nav('home')" class="hover:text-blue-700">ראשי</button>
+      <span>/</span><span class="text-gray-800">קטלוג</span>
+    </nav>
+    <div class="flex flex-col md:flex-row gap-8">
+      <!-- Sidebar -->
+      <aside class="w-full md:w-64 shrink-0">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <h3 class="font-bold text-gray-800 mb-4 text-lg">סינון מוצרים</h3>
+          <div class="mb-5">
+            <label class="text-sm font-medium text-gray-600 block mb-2">חיפוש</label>
+            <input id="filter-search" type="text" placeholder="שם מוצר, מותג..." oninput="renderCatalog()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+          </div>
+          <div class="mb-5">
+            <label class="text-sm font-medium text-gray-600 block mb-2">קטגוריה</label>
+            <div class="space-y-1">
+              <button onclick="setCategory('')" id="cat-all" class="w-full text-right px-3 py-2 rounded-lg text-sm bg-blue-50 text-blue-700 font-medium transition-colors">הכל</button>
+              <button onclick="setCategory('mountain')" id="cat-mountain" class="w-full text-right px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">⛰️ אופני הרים</button>
+              <button onclick="setCategory('road')" id="cat-road" class="w-full text-right px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">🚴 אופני כביש</button>
+              <button onclick="setCategory('electric')" id="cat-electric" class="w-full text-right px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">⚡ חשמליים</button>
+              <button onclick="setCategory('city')" id="cat-city" class="w-full text-right px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">🏙️ אופני עיר</button>
+              <button onclick="setCategory('kids')" id="cat-kids" class="w-full text-right px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">👦 ילדים</button>
+              <button onclick="setCategory('accessories')" id="cat-accessories" class="w-full text-right px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">🔧 אביזרים</button>
+            </div>
+          </div>
+          <div class="mb-5">
+            <label class="text-sm font-medium text-gray-600 block mb-2">מחיר מקסימלי: ₪<span id="price-display">50,000</span></label>
+            <input id="filter-price" type="range" min="500" max="50000" step="500" value="50000" oninput="document.getElementById('price-display').textContent=Number(this.value).toLocaleString();renderCatalog()" class="w-full accent-orange-500" style="direction:ltr"/>
+            <div class="flex justify-between text-xs text-gray-400 mt-1"><span>₪500</span><span>₪50,000</span></div>
+          </div>
+          <button onclick="resetFilters()" class="w-full py-2 text-sm text-gray-500 hover:text-red-500 border border-gray-200 rounded-lg transition-colors">איפוס סינון</button>
+        </div>
+      </aside>
+      <!-- Grid -->
+      <div class="flex-1">
+        <div class="flex items-center justify-between mb-6">
+          <span id="catalog-count" class="text-gray-500 text-sm">8 מוצרים</span>
+          <select id="filter-sort" onchange="renderCatalog()" class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none">
+            <option value="name">מיון לפי שם</option>
+            <option value="price-asc">מחיר: נמוך לגבוה</option>
+            <option value="price-desc">מחיר: גבוה לנמוך</option>
+          </select>
+        </div>
+        <div id="catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PRODUCT PAGE ═══════════════ -->
+<div id="page-product" class="page">
+  <div id="product-content" class="max-w-7xl mx-auto px-4 py-8"></div>
+</div>
+
+<!-- ═══════════════ ABOUT PAGE ═══════════════ -->
+<div id="page-about" class="page">
+  <section class="hero-gradient text-white py-20">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h1 class="text-5xl font-black mb-4">אודות BILU BIKES</h1>
+      <p class="text-xl text-blue-200">יותר מ-15 שנות אהבה לאופניים</p>
+    </div>
+  </section>
+  <div class="max-w-7xl mx-auto px-4 py-16">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-20">
+      <div>
+        <h2 class="text-3xl font-black text-blue-900 mb-6">הסיפור שלנו</h2>
+        <div class="space-y-4 text-gray-600 leading-relaxed">
+          <p>BILU BIKES נוסדה בשנת 2009 על ידי בילו גרוסמן, רוכב אופניים נלהב שחלם על חנות אופניים שונה מכולן — מקום שבו שירות אישי, ידע מקצועי ומוצרים איכותיים מגיעים יחד.</p>
+          <p>מאז הקמתה, BILU BIKES צמחה להיות אחת מחנויות האופניים המובילות בישראל עם מאות לקוחות מרוצים ואלפי מוצרים במלאי.</p>
+          <p>אנחנו מאמינים שרכיבה על אופניים היא לא רק ספורט — זו דרך חיים. לכן אנחנו כאן לעזור לכל רוכב, מתחיל ומנוסה, למצוא את האופניים המושלמים עבורו.</p>
+        </div>
+      </div>
+      <div class="bg-gradient-to-br from-blue-100 to-blue-200 rounded-3xl p-12 text-center">
+        <div class="text-8xl mb-4">🚴</div>
+        <div class="text-6xl font-black text-blue-900">15+</div>
+        <div class="text-blue-600 text-xl mt-2">שנות ניסיון</div>
+      </div>
+    </div>
+    <div class="mb-20">
+      <h2 class="text-3xl font-black text-blue-900 text-center mb-12">הערכים שלנו</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center"><div class="text-5xl mb-4">🏆</div><h3 class="font-bold text-xl text-gray-800 mb-3">איכות ללא פשרות</h3><p class="text-gray-600 leading-relaxed">אנחנו עובדים רק עם המותגים הטובים בעולם ומוכרים רק מוצרים מקוריים עם אחריות מלאה.</p></div>
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center"><div class="text-5xl mb-4">❤️</div><h3 class="font-bold text-xl text-gray-800 mb-3">אהבה לרכיבה</h3><p class="text-gray-600 leading-relaxed">הצוות שלנו מורכב מרוכבים נלהבים שיודעים להמליץ מניסיון אישי על כל מוצר.</p></div>
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center"><div class="text-5xl mb-4">🤝</div><h3 class="font-bold text-xl text-gray-800 mb-3">שירות אישי</h3><p class="text-gray-600 leading-relaxed">כל לקוח מקבל ייעוץ אישי ומקצועי. אנחנו כאן בשבילך גם אחרי הקנייה.</p></div>
+      </div>
+    </div>
+    <div class="mb-20">
+      <h2 class="text-3xl font-black text-blue-900 text-center mb-12">הצוות שלנו</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center"><div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">👨‍🔧</div><div class="font-bold text-gray-800">בילו גרוסמן</div><div class="text-sm text-blue-600 mt-1">מייסד ומנכ"ל</div></div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center"><div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">👩‍💼</div><div class="font-bold text-gray-800">שרה לוי</div><div class="text-sm text-blue-600 mt-1">מנהלת מכירות</div></div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center"><div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">👨‍🔬</div><div class="font-bold text-gray-800">אמיר כהן</div><div class="text-sm text-blue-600 mt-1">טכנאי ראשי</div></div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center"><div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">👩‍💻</div><div class="font-bold text-gray-800">מיה ברק</div><div class="text-sm text-blue-600 mt-1">שירות לקוחות</div></div>
+      </div>
+    </div>
+    <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl p-10 text-white text-center">
+      <h2 class="text-3xl font-black mb-3">מוכן לרכוב?</h2>
+      <p class="text-orange-100 mb-6 text-lg">בוא לבקר אותנו בחנות או דפדף בקטלוג המוצרים</p>
+      <div class="flex flex-wrap justify-center gap-4">
+        <button onclick="nav('catalog')" class="px-8 py-3 bg-white text-orange-600 rounded-xl font-bold hover:bg-orange-50 transition-colors">לקטלוג</button>
+        <button onclick="nav('contact')" class="px-8 py-3 bg-orange-400 text-white rounded-xl font-bold hover:bg-orange-300 transition-colors">צור קשר</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CONTACT PAGE ═══════════════ -->
+<div id="page-contact" class="page">
+  <section class="hero-gradient text-white py-20">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h1 class="text-5xl font-black mb-4">צור קשר</h1>
+      <p class="text-xl text-blue-200">נשמח לשמוע ממך! הצוות שלנו כאן בשבילך</p>
+    </div>
+  </section>
+  <div class="max-w-6xl mx-auto px-4 py-16">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div>
+        <h2 class="text-2xl font-black text-blue-900 mb-6">שלח הודעה</h2>
+        <form onsubmit="event.preventDefault();alert('תודה! נחזור אליך בהקדם 🙏')" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="text-sm font-medium text-gray-600 block mb-1">שם פרטי</label><input type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="ישראל"/></div>
+            <div><label class="text-sm font-medium text-gray-600 block mb-1">שם משפחה</label><input type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="ישראלי"/></div>
+          </div>
+          <div><label class="text-sm font-medium text-gray-600 block mb-1">אימייל</label><input type="email" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="israel@email.com"/></div>
+          <div><label class="text-sm font-medium text-gray-600 block mb-1">טלפון</label><input type="tel" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="050-1234567" style="direction:ltr"/></div>
+          <div><label class="text-sm font-medium text-gray-600 block mb-1">נושא</label>
+            <select class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+              <option>שאלה על מוצר</option><option>הזמנה ומשלוח</option><option>שירות ותיקונים</option><option>אחר</option>
+            </select>
+          </div>
+          <div><label class="text-sm font-medium text-gray-600 block mb-1">הודעה</label><textarea rows="4" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none" placeholder="איך נוכל לעזור?"></textarea></div>
+          <button type="submit" class="w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-lg transition-colors">שלח הודעה</button>
+        </form>
+      </div>
+      <div class="space-y-6">
+        <h2 class="text-2xl font-black text-blue-900">פרטי קשר</h2>
+        <div class="space-y-4">
+          <div class="flex items-start gap-4 bg-white rounded-2xl p-5 shadow-sm border border-gray-100"><div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl shrink-0">📍</div><div><div class="font-bold text-gray-800">כתובת</div><div class="text-gray-600 mt-1">רחוב הרצל 42<br/>תל אביב-יפו, 6575456</div></div></div>
+          <div class="flex items-start gap-4 bg-white rounded-2xl p-5 shadow-sm border border-gray-100"><div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shrink-0">📞</div><div><div class="font-bold text-gray-800">טלפון</div><div class="text-gray-600 mt-1" style="direction:ltr">03-1234567</div><div class="text-gray-600 text-sm" style="direction:ltr">050-9876543 (WhatsApp)</div></div></div>
+          <div class="flex items-start gap-4 bg-white rounded-2xl p-5 shadow-sm border border-gray-100"><div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-2xl shrink-0">✉️</div><div><div class="font-bold text-gray-800">אימייל</div><div class="text-gray-600 mt-1">info@bilubikes.co.il</div></div></div>
+          <div class="flex items-start gap-4 bg-white rounded-2xl p-5 shadow-sm border border-gray-100"><div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shrink-0">🕐</div><div><div class="font-bold text-gray-800">שעות פתיחה</div><div class="text-gray-600 mt-1">ראשון–חמישי: 10:00–19:00<br/>שישי: 10:00–14:00<br/>שבת: סגור</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ DATA ═══
+const PRODUCTS = [
+  {id:"1",name:"אופני הרים TREK Marlin 7",brand:"Trek",description:"אופני הרים מקצועיים עם מסגרת אלומיניום קלת משקל, 27 הילוכים שימאנו ומזלג סוספנציה 100מ\"מ. מתאים לשבילים טכניים ולרוכבים שרוצים לשדרג את הרכיבה שלהם.",price:3990,salePrice:3490,category:"mountain",stock:5,featured:true,tags:["הרים","29","סוספנציה"],specs:{"מסגרת":"אלומיניום Alpha Gold","גלגלים":"29 אינץ'","הילוכים":"27 (3x9)","בלמים":"דיסק הידרואולי","מזלג":"Suntour XCT 100mm","משקל":"14.2 ק\"ג"},emoji:"⛰️"},
+  {id:"2",name:"אופני כביש SPECIALIZED Allez",brand:"Specialized",description:"אופני כביש קלאסיים עם מסגרת אלומיניום A1, מושלמים לרוכבי כביש שמחפשים ביצועים גבוהים במחיר נגיש.",price:4990,category:"road",stock:3,featured:true,tags:["כביש","700c"],specs:{"מסגרת":"Specialized A1 Aluminum","גלגלים":"700c","הילוכים":"16 (2x8) Shimano Claris","בלמים":"קלאמפ","משקל":"9.8 ק\"ג"},emoji:"🚴"},
+  {id:"3",name:"אופניים חשמליים GIANT Explore E+",brand:"Giant",description:"אופניים חשמליים לשטח ולכביש עם מנוע SyncDrive Sport 80NM, סוללת 500Wh שמספקת טווח של עד 120 ק\"מ.",price:12990,salePrice:11490,category:"electric",stock:2,featured:true,tags:["חשמלי","27.5"],specs:{"מנוע":"Giant SyncDrive Sport 80NM","סוללה":"500Wh","טווח":"עד 120 ק\"מ","גלגלים":"27.5 אינץ'","הילוכים":"11 Shimano Deore","משקל":"22.5 ק\"ג"},emoji:"⚡"},
+  {id:"4",name:"אופני עיר CANNONDALE Quick 4",brand:"Cannondale",description:"אופני עיר מהירים ונוחים לשימוש יומיומי. מסגרת אלומיניום קלה, מחזיר בוץ מובנה וסל אחורי.",price:2490,category:"city",stock:8,featured:false,tags:["עיר","יומיומי"],specs:{"מסגרת":"Smart Form C3 Alloy","גלגלים":"700c","הילוכים":"7 Shimano Tourney","בלמים":"V-Brake","משקל":"11.3 ק\"ג"},emoji:"🏙️"},
+  {id:"5",name:"קסדת GIRO Fixture II",brand:"Giro",description:"קסדת אופניים איכותית עם 19 פתחי אוורור, מערכת Roc Loc Sport לכיוון מהיר ונוח.",price:280,salePrice:229,category:"accessories",stock:15,featured:false,tags:["קסדה","בטיחות"],specs:{"גודל":"54-61 ס\"מ","פתחי אוורור":"19","תקן":"CPSC/EN1078"},emoji:"🔧"},
+  {id:"6",name:"אופני ילדים TREK Precaliber 24",brand:"Trek",description:"אופני ילדים מקצועיים לגילאי 8-12 שנים, עם 8 הילוכים ובלמי כף יד קלים.",price:1790,category:"kids",stock:6,featured:false,tags:["ילדים","24"],specs:{"גלגלים":"24 אינץ'","הילוכים":"8 Shimano","מסגרת":"אלומיניום","גיל מומלץ":"8-12 שנים"},emoji:"👦"},
+  {id:"7",name:"כיסא רכיבה FIZIK Tempo Argo R5",brand:"Fizik",description:"כיסא אופניים ארגונומי לרוכבים עם גמישות ירכיים בינונית. ריפוד כפול ועיצוב שטוח.",price:380,category:"accessories",stock:10,featured:false,tags:["כיסא","נוחות"],specs:{"רוחב":"150 מ\"מ","משקל":"225 גרם","חומר":"Microfibre"},emoji:"🔧"},
+  {id:"8",name:"תיק גב OSPREY Raptor 14",brand:"Osprey",description:"תיק גב לרכיבה עם מיכל מים 2.5 ליטר מובנה, 14 ליטר נפח, ומערכת אוורור AirSpeed.",price:560,category:"accessories",stock:7,featured:false,tags:["תיק","הידרציה"],specs:{"נפח":"14 ליטר","מיכל מים":"2.5 ליטר","משקל":"1.3 ק\"ג"},emoji:"🔧"},
+];
+
+// ═══ CART ═══
+let cart = JSON.parse(localStorage.getItem('bilu-cart')||'[]');
+function saveCart(){localStorage.setItem('bilu-cart',JSON.stringify(cart));}
+function cartTotal(){return cart.reduce((s,i)=>s+(i.price*i.qty),0);}
+function cartCount(){return cart.reduce((s,i)=>s+i.qty,0);}
+
+function updateCartUI(){
+  const count=cartCount();
+  const badge=document.getElementById('cart-badge');
+  if(count>0){badge.textContent=count;badge.classList.remove('hidden');}
+  else badge.classList.add('hidden');
+
+  const items=document.getElementById('cart-items');
+  if(cart.length===0){
+    items.innerHTML='<div class="text-center py-16 text-gray-400"><div class="text-5xl mb-3">🛒</div><p class="font-medium">העגלה ריקה</p><button onclick="closeCart();nav(\'catalog\')" class="mt-4 px-6 py-2 bg-orange-500 text-white rounded-xl font-medium text-sm hover:bg-orange-600 transition-colors">לקטלוג</button></div>';
+  } else {
+    items.innerHTML=cart.map(item=>`
+      <div class="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+        <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-2xl shrink-0 shadow-sm">${item.emoji||'🚲'}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-gray-800 text-sm leading-tight truncate">${item.name}</div>
+          <div class="text-blue-700 font-bold text-sm">₪${(item.price*item.qty).toLocaleString()}</div>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="changeQty('${item.id}',-1)" class="w-7 h-7 rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center justify-center font-bold text-gray-600 transition-colors">−</button>
+          <span class="w-6 text-center font-medium text-sm">${item.qty}</span>
+          <button onclick="changeQty('${item.id}',1)" class="w-7 h-7 rounded-lg bg-gray-200 hover:bg-gray-300 flex items-center justify-center font-bold text-gray-600 transition-colors">+</button>
+        </div>
+        <button onclick="removeItem('${item.id}')" class="w-7 h-7 rounded-lg hover:bg-red-100 hover:text-red-500 flex items-center justify-center text-gray-400 transition-colors">✕</button>
+      </div>
+    `).join('');
+  }
+  document.getElementById('cart-total').textContent='₪'+cartTotal().toLocaleString();
+}
+
+function addToCart(id,qty){
+  const p=PRODUCTS.find(x=>x.id===id);
+  if(!p)return;
+  const price=p.salePrice||p.price;
+  const existing=cart.find(x=>x.id===id);
+  if(existing)existing.qty+=qty;
+  else cart.push({id,name:p.name,price,qty,emoji:p.emoji});
+  saveCart();updateCartUI();openCart();
+}
+
+function changeQty(id,delta){
+  const item=cart.find(x=>x.id===id);
+  if(!item)return;
+  item.qty+=delta;
+  if(item.qty<=0)cart=cart.filter(x=>x.id!==id);
+  saveCart();updateCartUI();
+}
+function removeItem(id){cart=cart.filter(x=>x.id!==id);saveCart();updateCartUI();}
+
+function openCart(){document.getElementById('cart').classList.add('open');document.getElementById('overlay').classList.add('active');}
+function closeCart(){document.getElementById('cart').classList.remove('open');document.getElementById('overlay').classList.remove('active');}
+
+// ═══ ROUTING ═══
+let currentCat='';
+function nav(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  window.scrollTo(0,0);
+  if(page==='catalog')renderCatalog();
+  if(page==='home')renderFeatured();
+}
+function navCat(cat){currentCat=cat;nav('catalog');}
+
+// ═══ PRODUCT CARD ═══
+function productCard(p){
+  const price=p.salePrice||p.price;
+  const hasDiscount=p.salePrice&&p.salePrice<p.price;
+  const discount=hasDiscount?Math.round(((p.price-p.salePrice)/p.price)*100):0;
+  return `
+    <div class="product-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer" onclick="showProduct('${p.id}')">
+      <div class="relative bg-gradient-to-br from-gray-50 to-gray-100 h-52 flex items-center justify-center">
+        <span class="text-7xl">${p.emoji||'🚲'}</span>
+        ${hasDiscount?`<div class="absolute top-3 right-3 bg-red-500 text-white text-sm font-black px-2.5 py-1 rounded-lg">-${discount}%</div>`:''}
+        ${p.stock<=3&&p.stock>0?`<div class="absolute top-3 left-3 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-lg">נותרו ${p.stock}!</div>`:''}
+        ${p.stock===0?`<div class="absolute inset-0 bg-white/70 flex items-center justify-center"><span class="bg-red-100 text-red-600 font-bold px-4 py-2 rounded-xl">אזל המלאי</span></div>`:''}
+      </div>
+      <div class="p-4">
+        <div class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">${p.brand}</div>
+        <h3 class="font-bold text-gray-800 leading-tight mb-3 line-clamp-2">${p.name}</h3>
+        <div class="flex items-center justify-between">
+          <div class="flex items-end gap-2">
+            <span class="text-xl font-black text-blue-900">₪${price.toLocaleString()}</span>
+            ${hasDiscount?`<span class="text-gray-400 line-through text-sm">₪${p.price.toLocaleString()}</span>`:''}
+          </div>
+          ${p.stock>0?`<button onclick="event.stopPropagation();addToCart('${p.id}',1)" class="px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold transition-colors">+ לעגלה</button>`:''}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ═══ HOME: FEATURED ═══
+function renderFeatured(){
+  const featured=PRODUCTS.filter(p=>p.featured);
+  document.getElementById('featured-grid').innerHTML=featured.map(productCard).join('');
+}
+
+// ═══ CATALOG ═══
+function setCategory(cat){
+  currentCat=cat;
+  document.querySelectorAll('[id^=cat-]').forEach(b=>{
+    const isActive=b.id==='cat-'+( cat||'all');
+    b.className='w-full text-right px-3 py-2 rounded-lg text-sm transition-colors '+(isActive?'bg-blue-50 text-blue-700 font-medium':'text-gray-600 hover:bg-gray-50');
+  });
+  renderCatalog();
+}
+function resetFilters(){
+  currentCat='';
+  document.getElementById('filter-search').value='';
+  document.getElementById('filter-price').value=50000;
+  document.getElementById('price-display').textContent='50,000';
+  document.getElementById('filter-sort').value='name';
+  setCategory('');
+}
+function renderCatalog(){
+  const search=(document.getElementById('filter-search').value||'').toLowerCase();
+  const maxPrice=Number(document.getElementById('filter-price').value||50000);
+  const sort=document.getElementById('filter-sort').value;
+  let list=[...PRODUCTS]
+    .filter(p=>!currentCat||p.category===currentCat)
+    .filter(p=>!search||p.name.toLowerCase().includes(search)||p.brand.toLowerCase().includes(search))
+    .filter(p=>(p.salePrice||p.price)<=maxPrice)
+    .sort((a,b)=>{
+      if(sort==='price-asc')return(a.salePrice||a.price)-(b.salePrice||b.price);
+      if(sort==='price-desc')return(b.salePrice||b.price)-(a.salePrice||a.price);
+      return a.name.localeCompare(b.name,'he');
+    });
+  document.getElementById('catalog-count').textContent=list.length+' מוצרים';
+  const grid=document.getElementById('catalog-grid');
+  if(list.length===0){
+    grid.innerHTML='<div class="col-span-3 text-center py-20 text-gray-500"><div class="text-5xl mb-4">🔍</div><p class="font-medium text-lg">לא נמצאו מוצרים</p><button onclick="resetFilters()" class="mt-4 px-6 py-2 bg-orange-500 text-white rounded-xl font-medium text-sm">איפוס סינון</button></div>';
+  } else {
+    grid.innerHTML=list.map(productCard).join('');
+  }
+}
+
+// ═══ PRODUCT DETAIL ═══
+function showProduct(id){
+  const p=PRODUCTS.find(x=>x.id===id);
+  if(!p)return;
+  const price=p.salePrice||p.price;
+  const hasDiscount=p.salePrice&&p.salePrice<p.price;
+  const discount=hasDiscount?Math.round(((p.price-p.salePrice)/p.price)*100):0;
+  document.getElementById('product-content').innerHTML=`
+    <nav class="text-sm text-gray-500 mb-8 flex items-center gap-2">
+      <button onclick="nav('home')" class="hover:text-blue-700">ראשי</button><span>/</span>
+      <button onclick="nav('catalog')" class="hover:text-blue-700">קטלוג</button><span>/</span>
+      <span class="text-gray-800">${p.name}</span>
+    </nav>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <div>
+        <div class="aspect-square relative rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 flex items-center justify-center">
+          <span style="font-size:9rem">${p.emoji||'🚲'}</span>
+          ${hasDiscount?`<div class="absolute top-4 right-4 bg-red-500 text-white text-lg font-black px-3 py-1.5 rounded-xl">-${discount}%</div>`:''}
+        </div>
+      </div>
+      <div>
+        <span class="text-sm font-bold text-blue-600 uppercase tracking-widest">${p.brand}</span>
+        <h1 class="text-3xl font-black text-gray-900 mt-2 leading-tight">${p.name}</h1>
+        <div class="mt-6 flex items-end gap-4">
+          <span class="text-4xl font-black text-blue-900">₪${price.toLocaleString()}</span>
+          ${hasDiscount?`<div class="flex flex-col"><span class="text-gray-400 line-through text-xl">₪${p.price.toLocaleString()}</span><span class="text-red-500 text-sm font-bold">חסכת ₪${(p.price-p.salePrice).toLocaleString()}</span></div>`:''}
+        </div>
+        <div class="mt-4 flex items-center gap-2">
+          ${p.stock>0?`<span class="w-2.5 h-2.5 bg-green-500 rounded-full inline-block"></span><span class="text-green-700 font-medium text-sm">${p.stock>5?'במלאי':`נותרו ${p.stock} בלבד`}</span>`:`<span class="w-2.5 h-2.5 bg-red-500 rounded-full inline-block"></span><span class="text-red-600 font-medium text-sm">אזל המלאי</span>`}
+        </div>
+        ${p.stock>0?`
+        <div class="mt-8 space-y-4">
+          <div class="flex items-center gap-4">
+            <label class="text-sm font-medium text-gray-600">כמות:</label>
+            <div class="flex items-center gap-2 border border-gray-200 rounded-xl overflow-hidden">
+              <button onclick="if(window._qty>1)window._qty--;document.getElementById('qty-display').textContent=window._qty" class="w-10 h-10 flex items-center justify-center hover:bg-gray-100 font-bold text-gray-600 transition-colors">−</button>
+              <span id="qty-display" class="w-12 text-center font-medium">1</span>
+              <button onclick="if(window._qty<${p.stock})window._qty++;document.getElementById('qty-display').textContent=window._qty" class="w-10 h-10 flex items-center justify-center hover:bg-gray-100 font-bold text-gray-600 transition-colors">+</button>
+            </div>
+          </div>
+          <button onclick="addToCart('${p.id}',window._qty||1)" class="w-full py-4 rounded-2xl font-bold text-lg bg-orange-500 hover:bg-orange-600 text-white transition-all hover:scale-[1.02]">🛒 הוסף לעגלה</button>
+        </div>`:''}
+        <div class="mt-8 grid grid-cols-3 gap-3">
+          <div class="text-center bg-gray-50 rounded-xl p-3"><div class="text-2xl mb-1">🚚</div><div class="text-xs text-gray-600">משלוח חינם מ-₪299</div></div>
+          <div class="text-center bg-gray-50 rounded-xl p-3"><div class="text-2xl mb-1">↩️</div><div class="text-xs text-gray-600">החזרה תוך 30 יום</div></div>
+          <div class="text-center bg-gray-50 rounded-xl p-3"><div class="text-2xl mb-1">🛡️</div><div class="text-xs text-gray-600">אחריות יצרן</div></div>
+        </div>
+        ${p.tags&&p.tags.length?`<div class="mt-6 flex flex-wrap gap-2">${p.tags.map(t=>`<span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">#${t}</span>`).join('')}</div>`:''}
+      </div>
+    </div>
+    <div class="mt-16">
+      <div class="border-b border-gray-200 flex gap-1" id="tab-bar">
+        <button onclick="switchTab('desc')" id="tab-desc" class="px-6 py-3 font-medium border-b-2 border-orange-500 text-orange-600 transition-colors">תיאור המוצר</button>
+        <button onclick="switchTab('specs')" id="tab-specs" class="px-6 py-3 font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors">מפרט טכני</button>
+      </div>
+      <div id="tab-desc-content" class="py-8"><p class="text-gray-700 leading-relaxed text-lg max-w-3xl">${p.description}</p></div>
+      <div id="tab-specs-content" class="py-8 hidden">
+        ${p.specs&&Object.keys(p.specs).length?`<div class="max-w-2xl"><table class="w-full">${Object.entries(p.specs).map(([k,v],i)=>`<tr class="${i%2===0?'bg-gray-50':'bg-white'}"><td class="py-3 px-4 font-medium text-gray-700 w-1/3">${k}</td><td class="py-3 px-4 text-gray-600">${v}</td></tr>`).join('')}</table></div>`:`<p class="text-gray-500">אין מפרט טכני זמין</p>`}
+      </div>
+    </div>
+  `;
+  window._qty=1;
+  nav('product');
+}
+
+function switchTab(tab){
+  document.getElementById('tab-desc-content').classList.toggle('hidden',tab!=='desc');
+  document.getElementById('tab-specs-content').classList.toggle('hidden',tab!=='specs');
+  document.getElementById('tab-desc').className='px-6 py-3 font-medium border-b-2 transition-colors '+(tab==='desc'?'border-orange-500 text-orange-600':'border-transparent text-gray-500 hover:text-gray-700');
+  document.getElementById('tab-specs').className='px-6 py-3 font-medium border-b-2 transition-colors '+(tab==='specs'?'border-orange-500 text-orange-600':'border-transparent text-gray-500 hover:text-gray-700');
+}
+
+// ═══ INIT ═══
+updateCartUI();
+renderFeatured();
+setCategory('');
+</script>
+</body>
+</html>
