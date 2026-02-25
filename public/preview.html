@@ -12,7 +12,7 @@
   .product-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,.12); }
   .page { display:none; }
   .page.active { display:block; }
-  .cart-sidebar { transform:translateX(100%); transition:.3s; }
+  .cart-sidebar { transform:translateX(-100%); transition:transform .3s ease; }
   .cart-sidebar.open { transform:translateX(0); }
   .overlay { display:none; }
   .overlay.active { display:block; }
@@ -27,7 +27,7 @@
 <div id="overlay" class="overlay fixed inset-0 bg-black/50 z-40" onclick="closeCart()"></div>
 
 <!-- CART SIDEBAR -->
-<div id="cart" class="cart-sidebar fixed top-0 left-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
+<div id="cart" class="cart-sidebar fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
   <div class="flex items-center justify-between p-5 border-b border-gray-100">
     <h2 class="text-xl font-black text-gray-800">🛒 עגלת הקניות</h2>
     <button onclick="closeCart()" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors">✕</button>
