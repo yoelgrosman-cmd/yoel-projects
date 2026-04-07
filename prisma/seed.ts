@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+
 import bcrypt from "bcryptjs";
 import { readFileSync } from "fs";
 import { join, resolve } from "path";
@@ -9,19 +10,13 @@ config({ path: resolve(process.cwd(), ".env.local") });
 config({ path: resolve(process.cwd(), ".env") });
 
 const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
+const filePath = dbUrl.startsWith("file:") ? dbUrl.slice(5) : dbUrl;
+const dbPath = filePath.startsWith("./") || filePath.startsWith(".\\")
+  ? resolve(process.cwd(), filePath)
+  : filePath;
 
-function toLibsqlUrl(url: string): string {
-  if (url.startsWith("file:./")) {
-    return `file:${resolve(process.cwd(), url.slice(7))}`;
-  }
-  if (url.startsWith("file:") && !url.startsWith("file://")) {
-    return `file:${resolve(process.cwd(), url.slice(5))}`;
-  }
-  return url;
-}
 
-const libsqlUrl = toLibsqlUrl(dbUrl);
-const adapter = new PrismaLibSql({ url: libsqlUrl });
+const adapter = new PrismaBetterSqlite3({ url: dbPath });
 const prisma = new PrismaClient({ adapter });
 
 function slugify(text: string): string {

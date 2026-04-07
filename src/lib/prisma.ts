@@ -1,20 +1,18 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { resolve } from "path";
 
-function getLibsqlUrl(): string {
-  const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
-  if (dbUrl.startsWith("file:./")) {
-    return `file:${resolve(process.cwd(), dbUrl.slice(7))}`;
+function getDbPath(): string {
+  const url = process.env.DATABASE_URL || "file:./dev.db";
+  const filePath = url.startsWith("file:") ? url.slice(5) : url;
+  if (filePath.startsWith("./") || filePath.startsWith(".\\")) {
+    return resolve(process.cwd(), filePath);
   }
-  if (dbUrl.startsWith("file:") && !dbUrl.startsWith("file://")) {
-    return `file:${resolve(process.cwd(), dbUrl.slice(5))}`;
-  }
-  return dbUrl;
+  return filePath;
 }
 
 function createPrismaClient() {
-  const adapter = new PrismaLibSql({ url: getLibsqlUrl() });
+  const adapter = new PrismaBetterSqlite3({ url: getDbPath() });
   return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
