@@ -1,0 +1,401 @@
+{
+  "$schema": "property-management-system-spec/v2",
+  "meta": {
+    "title": "מערכת ניהול נכסים ושוכרים לחברת ניהול",
+    "language": "he",
+    "direction": "rtl",
+    "currency": "ILS",
+    "preparedFor": "יואל",
+    "date": "2026-08-13",
+    "status": "טיוטה לדיון - גרסה 2"
+  },
+
+  "buildInstructions": "בנה אפליקציית ווב פנימית בעברית, כיווניות RTL מלאה, למשתמשים אחד בלבד: צוות חברת ניהול נכסים. לשוכרים אין חשבון משתמש - כל אינטראקציה שלהם (דיווח פדיון חודשי) מתבצעת דרך קישור מאובטח חד-פעמי (טוקן ייחודי) ללא התחברות. עקרון העל של המוצר הוא פשטות תפעולית: מסך הבית הוא דשבורד יחיד עם 'מרכז פעולות' מאוחד (ראה dashboard). השתמש בפלטת הצבעים וטיפוגרפיה שב-designSystem לכל הממשק. יישם קודם את entities ואת modules המסומנים phase=1, ורק אחר כך שלבים 2-3.",
+
+  "designSystem": {
+    "principles": [
+      "מסך בית יחיד (דשבורד + מרכז פעולות) - לא ניווט מרובה שלבים כדי לגלות מה דחוף",
+      "מינימום שדות וקליקים לפעולות יומיומיות: סימון תשלום, אישור פדיון, חידוש חוזה",
+      "שפה פשוטה בממשק - לא מונחים טכניים",
+      "שפה ויזואלית אחידה: אותם צבעי סטטוס (ירוק/צהוב/אדום) בכל מסך שמציג תוקפים",
+      "נגישות ממסך טלפון לפחות לדשבורד ולמרכז הפעולות"
+    ],
+    "colorPalette": {
+      "light": {
+        "background": "#F6F3EC",
+        "surface": "#FFFFFF",
+        "surfaceAlt": "#FBF9F4",
+        "textPrimary": "#2B2620",
+        "textMuted": "#6B6255",
+        "border": "#E1D9C8",
+        "accentPrimary": "#3F5D3A",
+        "accentPrimaryDark": "#2E4529",
+        "accentSoft": "#E7ECDE",
+        "warning": "#B25A26",
+        "warningSoft": "#F3E4D6",
+        "statusOk": "#4C7A44",
+        "statusOkSoft": "#E4EEE0",
+        "statusSoon": "#B98A22",
+        "statusSoonSoft": "#F5EAD3",
+        "statusUrgent": "#AE3E2F",
+        "statusUrgentSoft": "#F5DFDA"
+      },
+      "dark": {
+        "background": "#1C1B17",
+        "surface": "#232220",
+        "surfaceAlt": "#282722",
+        "textPrimary": "#ECE7DA",
+        "textMuted": "#A79C89",
+        "border": "#3A362D",
+        "accentPrimary": "#8FB37E",
+        "accentPrimaryDark": "#A9CC99",
+        "accentSoft": "#2B3627",
+        "warning": "#E4986A",
+        "warningSoft": "#3B2A20",
+        "statusOk": "#7FAE72",
+        "statusOkSoft": "#293425",
+        "statusSoon": "#D3A94C",
+        "statusSoonSoft": "#332C1B",
+        "statusUrgent": "#D97B69",
+        "statusUrgentSoft": "#3A2521"
+      },
+      "usageNotes": "accentPrimary (ירוק זית) לפעולות ראשיות וכותרות מודגשות. warning (טרה-קוטה) לקריאות תשומת לב ושאלות פתוחות בלבד, לא לשימוש כללי. statusOk/Soon/Urgent הם צבעי סמנטיקה נפרדים מהאקסנט - משמשים אך ורק לסימון תוקפים (חוזה/ערבות/מסמך) ותפוסת נכסים, לא לכפתורים רגילים."
+    },
+    "typography": {
+      "fontFamily": "\"Segoe UI\", \"Noto Sans Hebrew\", \"Arial Hebrew\", Arial, sans-serif",
+      "note": "אין להשתמש בפונט לועזי בלבד - חובה תמיכה מלאה בעברית. הימנע מ-letter-spacing שלילי על טקסט עברי.",
+      "weights": { "heading": 800, "subheading": 700, "body": 400 },
+      "scale": {
+        "h1": "2.35rem",
+        "h2": "1.5rem",
+        "h3": "1.08rem",
+        "body": "1rem",
+        "caption": "0.85rem"
+      },
+      "lineHeightBody": 1.75,
+      "numerics": "השתמש ב-tabular-nums לכל טבלה עם מספרים/תאריכים/סכומים כדי שהעמודות יתיישרו"
+    },
+    "layout": {
+      "direction": "rtl",
+      "maxContentWidth": "1200px",
+      "borderRadius": "12px",
+      "spacingUnit": "8px",
+      "cardStyle": "רקע surface, מסגרת דקה בצבע border, פינות מעוגלות 10-14px, ללא צללים כבדים"
+    },
+    "statusColorLegend": [
+      { "key": "ok", "label": "תקין", "color": "statusOk", "meaning": "חוזה/מסמך/ערבות בתוקף, אין צורך בפעולה קרובה" },
+      { "key": "soon", "label": "מתקרב לסיום", "color": "statusSoon", "meaning": "בטווח התראה שהוגדר, למשל 90-30 יום" },
+      { "key": "urgent", "label": "דחוף", "color": "statusUrgent", "meaning": "נותרו ימים בודדים, או שכבר פג" }
+    ]
+  },
+
+  "users": {
+    "audience": "צוות חברת הניהול בלבד",
+    "tenantAccess": "ללא חשבון משתמש - טפסים חיצוניים מאובטחים בקישור חד-פעמי בלבד",
+    "proposedRoles": [
+      { "role": "manager", "label": "מנהל/ת", "permissions": "גישה מלאה, כולל עריכת תנאים כספיים (אחוזים, סכומים, תאריכי חוזה)" },
+      { "role": "staff", "label": "איש/ת צוות תפעולי/ת", "permissions": "צפייה + עדכון פעולות שוטפות (סימון תשלום, אישור פדיון), ללא עריכת תנאי חוזה" }
+    ],
+    "openQuestion": "האם שתי רמות הרשאה מספיקות או שיש תפקידים נוספים - ראה openQuestions"
+  },
+
+  "entities": {
+    "client": {
+      "label": "לקוח / שוכר",
+      "phase": 1,
+      "fields": [
+        { "name": "name", "label": "שם", "type": "text", "required": true, "notes": "שם פרטי או שם עסק" },
+        { "name": "phone", "label": "טלפון", "type": "text", "required": true, "notes": "ולידציית פורמט ישראלי" },
+        { "name": "email", "label": "מייל", "type": "email", "required": true, "notes": "יעד לתזכורות ולקישור דיווח פדיון" },
+        { "name": "propertyNumber", "label": "מספר נכס בקיבוץ", "type": "relation", "relatesTo": "property", "required": true },
+        { "name": "contracts", "label": "חוזה שכירות", "type": "relation[]", "relatesTo": "contract", "notes": "יכול לכלול היסטוריית חוזים" },
+        { "name": "status", "label": "סטטוס", "type": "enum", "options": ["active", "inactive"], "notes": "לארכוב תיקים ללא מחיקה" },
+        { "name": "notes", "label": "הערות", "type": "textarea", "required": false }
+      ],
+      "creationMethods": ["ייבוא מקובץ אקסל (תבנית עמודות קבועה + דוח שגיאות ולידציה)", "הוספה ידנית - טופס פתיחת תיק בודד"]
+    },
+
+    "property": {
+      "label": "נכס",
+      "phase": 1,
+      "fields": [
+        { "name": "propertyId", "label": "מספר נכס", "type": "text", "required": true, "notes": "מזהה ייחודי בקיבוץ" },
+        { "name": "location", "label": "מיקום / אזור", "type": "text", "notes": "לצורך מיון וסינון" },
+        { "name": "propertyType", "label": "סוג נכס", "type": "enum", "options": ["מסחרי", "מחסן", "משרד", "אחר"] },
+        { "name": "sizeSqm", "label": "גודל (מ״ר)", "type": "number" },
+        { "name": "occupancyStatus", "label": "סטטוס תפוסה", "type": "enum", "options": ["מושכר", "פנוי"], "notes": "נגזר אוטומטית מקיום חוזה פעיל" },
+        { "name": "currentClient", "label": "לקוח נוכחי", "type": "relation", "relatesTo": "client", "required": false },
+        { "name": "currentContract", "label": "חוזה נוכחי", "type": "relation", "relatesTo": "contract", "required": false }
+      ],
+      "creationMethods": ["ייבוא מקובץ אקסל עם כל הנכסים בקיבוץ"],
+      "listView": {
+        "grouping": ["מושכר", "לא מושכר"],
+        "colorCoding": "לפי סטטוס תוקף החוזה - ראה statusColorLegend",
+        "sortAndFilterBy": ["מיקום", "גודל", "סטטוס תפוסה"]
+      }
+    },
+
+    "contract": {
+      "label": "חוזה",
+      "phase": 1,
+      "fields": [
+        { "name": "client", "label": "לקוח מקושר", "type": "relation", "relatesTo": "client", "required": true },
+        { "name": "property", "label": "נכס מקושר", "type": "relation", "relatesTo": "property", "required": true },
+        { "name": "contractType", "label": "סוג חוזה", "type": "enum", "options": ["fixed", "revenueShare", "combined"], "labels": { "fixed": "שכירות קבועה", "revenueShare": "אחוז מפדיון", "combined": "משולב" } },
+        { "name": "fixedAmount", "label": "סכום קבוע (₪)", "type": "currency", "requiredWhen": "contractType in [fixed, combined]" },
+        { "name": "revenuePercentage", "label": "אחוז פדיון (%)", "type": "percentage", "requiredWhen": "contractType in [revenueShare, combined]" },
+        { "name": "startDate", "label": "תחילת חוזה", "type": "date", "required": true },
+        { "name": "endDate", "label": "סיום חוזה", "type": "date", "required": true },
+        { "name": "optionPeriod", "label": "תקופת אופציה", "type": "object", "notes": "משך + תאריך יעד להפעלה" },
+        { "name": "signedFile", "label": "קובץ חוזה חתום", "type": "file", "accepts": ["pdf", "image"] },
+        { "name": "extractionStatus", "label": "סטטוס חילוץ נתונים", "type": "enum", "options": ["pending", "approved"], "phase": 3, "notes": "רלוונטי לשלב 3 - קריאה חצי-אוטומטית" },
+        { "name": "cpiLinked", "label": "צמוד למדד", "type": "boolean" },
+        { "name": "cpiBaseValue", "label": "מדד בסיס (ערך + תאריך)", "type": "object", "requiredWhen": "cpiLinked = true" },
+        { "name": "cpiUpdateFrequency", "label": "תדירות עדכון הצמדה", "type": "enum", "options": ["yearly", "quarterly", "onContractDate"], "requiredWhen": "cpiLinked = true" }
+      ],
+      "subEntities": ["guarantee"],
+      "notes": "כל חוזה יכול להיות צמוד למדד. שלב 1: הזנת סכום מעודכן ידנית + תיעוד ערך/תאריך המדד. שלב 2: חישוב אוטומטי מול מדד המחירים לצרכן."
+    },
+
+    "guarantee": {
+      "label": "בטוחה / ערבות",
+      "phase": 1,
+      "fields": [
+        { "name": "contract", "label": "חוזה מקושר", "type": "relation", "relatesTo": "contract", "required": true },
+        { "name": "guaranteeType", "label": "סוג בטוחה", "type": "enum", "options": ["ערבות בנקאית", "שיק ביטחון", "פיקדון כספי"] },
+        { "name": "amount", "label": "סכום", "type": "currency" },
+        { "name": "expiryDate", "label": "תאריך תוקף", "type": "date", "notes": "רלוונטי בעיקר לערבות בנקאית מתחדשת" },
+        { "name": "issuer", "label": "גורם מנפיק", "type": "text", "required": false },
+        { "name": "notes", "label": "הערות", "type": "textarea", "required": false }
+      ],
+      "reminderMechanism": "expirableEntity"
+    },
+
+    "complianceDocument": {
+      "label": "מסמך ציות",
+      "phase": 1,
+      "fields": [
+        { "name": "client", "label": "לקוח מקושר", "type": "relation", "relatesTo": "client", "required": true },
+        { "name": "documentType", "label": "סוג מסמך", "type": "enum", "options": ["ביטוח", "רישיון עסק", "אישור ניהול ספרים", "אחר"] },
+        { "name": "expiryDate", "label": "תאריך תוקף", "type": "date", "required": true },
+        { "name": "file", "label": "קובץ מצורף", "type": "file" },
+        { "name": "reminderDaysBefore", "label": "תזכורת (ימים מראש)", "type": "number" }
+      ],
+      "reminderMechanism": "expirableEntity",
+      "notes": "חוזה / אופציה / ערבות / מסמך ציות כולם מיישמים את אותה ישות 'expirableEntity' גנרית עם מנגנון תזכורות אחיד - הימנע משכפול לוגיקה."
+    },
+
+    "revenueReport": {
+      "label": "דיווח פדיון חודשי",
+      "phase": 1,
+      "appliesTo": "חוזים מסוג revenueShare או combined",
+      "fields": [
+        { "name": "client", "label": "לקוח / חוזה מקושר", "type": "relation", "relatesTo": "contract", "required": true },
+        { "name": "period", "label": "חודש ושנה", "type": "yearMonth", "required": true, "notes": "מפתח הארכיון" },
+        { "name": "reportedAmount", "label": "סכום פדיון מדווח (₪)", "type": "currency", "required": true, "enteredBy": "tenant" },
+        { "name": "supportingDocument", "label": "אסמכתא מצורפת", "type": "file", "required": true, "enteredBy": "tenant" },
+        { "name": "chargePercentage", "label": "אחוז לחיוב", "type": "percentage", "computed": "מ-contract.revenuePercentage" },
+        { "name": "calculatedCharge", "label": "סכום לחיוב מחושב (₪)", "type": "currency", "computed": "reportedAmount * chargePercentage" },
+        { "name": "status", "label": "סטטוס", "type": "enum", "options": ["ממתין לדיווח", "דווח", "באיחור"] }
+      ],
+      "flow": [
+        "סוף חודש: מייל אוטומטי לשוכר עם קישור מאובטח לטופס דיווח",
+        "השוכר ממלא: סכום פדיון + מעלה אסמכתא תומכת",
+        "המערכת מחשבת אוטומטית את סכום החיוב לפי אחוז הפדיון מכרטיס הלקוח",
+        "הדיווח נשמר בתיק הלקוח, ממוין לפי חודש ושנה"
+      ]
+    },
+
+    "monthlyCharge": {
+      "label": "חיוב חודשי (חוזה קבוע)",
+      "phase": 1,
+      "appliesTo": "חוזים מסוג fixed או הרכיב הקבוע ב-combined",
+      "notes": "סוגר פער: עד כה מעקב חודשי היה קיים רק לאחוז מפדיון. כעת לכל שוכר יש יומן תשלומים חודשי אחיד, ללא קשר לסוג החוזה. הרשומה נוצרת אוטומטית בתחילת כל חודש.",
+      "fields": [
+        { "name": "client", "label": "לקוח / חוזה מקושר", "type": "relation", "relatesTo": "contract", "required": true },
+        { "name": "period", "label": "חודש ושנה", "type": "yearMonth", "required": true },
+        { "name": "amountDue", "label": "סכום לתשלום", "type": "currency", "computed": "מהחוזה, כולל הצמדה מעודכנת אם קיימת" },
+        { "name": "paymentStatus", "label": "סטטוס תשלום", "type": "enum", "options": ["שולם", "לא שולם", "שולם חלקית"] },
+        { "name": "paidDate", "label": "תאריך תשלום בפועל", "type": "date", "required": false }
+      ]
+    },
+
+    "ancillaryPayment": {
+      "label": "תשלום נלווה",
+      "phase": 2,
+      "fields": [
+        { "name": "paymentType", "label": "סוג תשלום", "type": "enum", "options": ["ארנונה", "דמי ניהול / ועד", "חשמל ומים"] },
+        { "name": "responsibleParty", "label": "אחראי לתשלום", "type": "enum", "options": ["שוכר", "משכיר"] },
+        { "name": "referenceAmount", "label": "סכום ייחוס", "type": "currency", "required": false, "notes": "שלב 1: שדה מידע בלבד. שלב 2: מעקב חודשי מלא אם יידרש" }
+      ]
+    }
+  },
+
+  "modules": {
+    "clientManagement": {
+      "label": "תיקי לקוחות ושוכרים",
+      "phase": 1,
+      "entities": ["client", "contract"],
+      "description": "פתיחת תיק לקוח מרכזת פרטי קשר, נכס, חוזה, והיסטוריה פיננסית באותו מקום. קובץ החוזה החתום מועלה ישירות לתיק ונשמר לצד הרשומה המבנית."
+    },
+
+    "contracts": {
+      "label": "חוזים",
+      "phase": 1,
+      "entities": ["contract", "guarantee"],
+      "description": "ניהול תנאי חוזה, הצמדה למדד, בטוחות, ותזכורות סיום/אופציה.",
+      "semiAutoContractReading": {
+        "phase": 3,
+        "flow": [
+          "העלאה: איש הצוות מעלה את קובץ החוזה הסרוק לתיק הלקוח",
+          "חילוץ: המערכת מריצה זיהוי טקסט ומציעה שם שוכר, מס׳ נכס, תאריכים, אופציה, סוג תשלום ואחוז",
+          "אישור: מסך עריכה מציג את השדות שזוהו לצד המסמך המקורי, לאישור או תיקון",
+          "שמירה: רק לאחר אישור אנושי הנתונים הופכים לרשומה הרשמית"
+        ]
+      }
+    },
+
+    "revenue": {
+      "label": "פדיון חודשי - אחוז מפדיון",
+      "phase": 1,
+      "entities": ["revenueReport"]
+    },
+
+    "fixedCollection": {
+      "label": "מעקב גבייה - חוזים קבועים",
+      "phase": 1,
+      "entities": ["monthlyCharge"]
+    },
+
+    "ancillaryPayments": {
+      "label": "תשלומים נלווים",
+      "phase": 2,
+      "entities": ["ancillaryPayment"]
+    },
+
+    "compliance": {
+      "label": "מסמכי ציות ותוקפים",
+      "phase": 1,
+      "entities": ["complianceDocument"]
+    },
+
+    "properties": {
+      "label": "ניהול נכסים",
+      "phase": 1,
+      "entities": ["property"],
+      "description": "מלאי נכסים נטען מקובץ אקסל, מוצג כטבלה עם סינון/מיון וצביעה לפי קרבה לסיום חוזה."
+    },
+
+    "vacateFlow": {
+      "label": "סיום ופינוי נכס",
+      "phase": 2,
+      "description": "כשחוזה מסתיים ואינו מתחדש: סטטוס הנכס מתעדכן אוטומטית לפנוי, וצוות עובר צ'קליסט.",
+      "checklist": ["החזרת בטוחה", "פרוטוקול מסירה ובדיקת מצב הנכס", "תיעוד (למשל תמונות)", "סגירת יתרות חוב פתוחות"],
+      "notes": "החוזה שהסתיים נשאר משויך להיסטוריית הלקוח - לא נמחק, רק מאבד סטטוס פעיל"
+    },
+
+    "auditAndPermissions": {
+      "label": "יומן שינויים והרשאות",
+      "phase": 2,
+      "description": "כל שינוי בנתון כספי (אחוז פדיון, סכום קבוע, תאריכי חוזה) נרשם עם מי ומתי ביצע את השינוי.",
+      "roles": "ראה users.proposedRoles"
+    }
+  },
+
+  "dashboard": {
+    "label": "דשבורד ומרכז פעולות",
+    "phase": 1,
+    "priority": "ליבת המוצר - לא תוספת מאוחרת, בהתאם לדרישת הפשטות התפעולית",
+    "kpis": [
+      { "key": "occupancy", "label": "נכסים מושכרים / סה״כ", "example": "42 / 51" },
+      { "key": "expectedMonthlyIncome", "label": "הכנסה חודשית צפויה", "example": "₪186,400" },
+      { "key": "pendingRevenueReports", "label": "דיווחי פדיון ממתינים", "example": "6" },
+      { "key": "unmarkedCharges", "label": "חיובים שטרם סומנו כשולמו", "example": "3" },
+      { "key": "contractsEndingSoon", "label": "חוזים מסתיימים ב-90 יום", "example": "4" }
+    ],
+    "actionCenter": {
+      "description": "רשימה אחת, ממוינת לפי דחיפות, מכל המודולים יחד - חוזה מתקרב לסיום, ערבות שעומדת לפוג, דיווח פדיון שלא הוגש, תשלום שלא סומן, מסמך ציות שפג. כל שורה לוחצת ישירות לתיק הרלוונטי.",
+      "sourceEntities": ["contract", "guarantee", "complianceDocument", "revenueReport", "monthlyCharge"],
+      "sortOrder": "לפי דחיפות (urgent -> soon)",
+      "colorCoding": "ראה designSystem.statusColorLegend"
+    },
+    "mobileAccess": "נדרשת נגישות מהטלפון לפחות לדשבורד ולמרכז הפעולות"
+  },
+
+  "automations": [
+    { "trigger": "קרבה לסיום חוזה / אופציה", "recipient": "צוות הניהול", "content": "התראה שחוזה מתקרב לתום תוקף", "timing": "X ימים מראש, לפי הגדרה", "channel": "email", "phase": 1 },
+    { "trigger": "קרבה לפקיעת ערבות בנקאית", "recipient": "צוות הניהול", "content": "תזכורת לחדש ערבות", "timing": "X ימים מראש", "channel": "email", "phase": 1 },
+    { "trigger": "קרבה לפקיעת מסמך ציות", "recipient": "צוות הניהול", "content": "תזכורת לחדש מסמך (ביטוח/רישיון)", "timing": "X ימים מראש", "channel": "email", "phase": 1 },
+    { "trigger": "תחילת חודש", "recipient": "שוכר (revenueShare/combined)", "content": "מייל עם קישור מאובטח לטופס דיווח פדיון", "timing": "יום קבוע בחודש", "channel": "email", "phase": 1 },
+    { "trigger": "דיווח פדיון לא הוגש", "recipient": "צוות הניהול", "content": "תזכורת על שוכר שלא דיווח בזמן", "timing": "X ימים אחרי המועד", "channel": "email", "phase": 1 },
+    { "trigger": "חיוב חודשי (חוזה קבוע) לא סומן כשולם", "recipient": "צוות הניהול", "content": "תזכורת מעקב גבייה", "timing": "X ימים אחרי המועד", "channel": "email", "phase": 1 },
+    { "trigger": "כל הטריגרים לעיל", "recipient": "-", "content": "ערוץ נוסף מתוכנן", "timing": "-", "channel": "whatsapp / sms", "phase": 2 }
+  ],
+
+  "technicalArchitecture": {
+    "notes": "הצעה ברמת עקרונות בלבד, פתוחה לשינוי לפי כלי הבילדר",
+    "recommendations": [
+      "אפליקציית ווב לצוות הניהול, נגישה גם ממסך טלפון (responsive) עבור הדשבורד ומרכז הפעולות",
+      "מסד נתונים יחסי עם הישויות שב-entities",
+      "ישות 'עם תוקף' גנרית (expirableEntity) שמשמשת contract, guarantee, complianceDocument - אותו מנגנון תזכורות לכולן",
+      "אחסון קבצים ייעודי לחוזים, אסמכתאות ומסמכי ציות",
+      "משימות מתוזמנות (scheduled jobs) לשליחת תזכורות/מיילים וליצירת monthlyCharge אוטומטית כל חודש",
+      "קישורים מאובטחים חד-פעמיים (טוקן ייחודי) לטופס revenueReport החיצוני - ללא התחברות לשוכר",
+      "שכבת התראות מורחבת: מייל כברירת מחדל בשלב 1, חיבור עתידי ל-WhatsApp Business API / SMS בשלב 2",
+      "שירות OCR לשלב החצי-אוטומטי של קריאת חוזים (שלב 3), עם מסך אישור אנושי חובה לפני שמירה"
+    ]
+  },
+
+  "developmentPhases": [
+    {
+      "phase": 1,
+      "label": "ליבה תפעולית ודשבורד (MVP)",
+      "items": [
+        "תיקי לקוחות: הזנה ידנית + ייבוא אקסל",
+        "ניהול נכסים: ייבוא, טבלה, מיון, צביעה לפי קרבה לסיום חוזה",
+        "חוזים: שדות מלאים כולל הצמדה (עדכון ידני) ובטוחות, ללא חילוץ אוטומטי מקובץ",
+        "תזכורות מאוחדות: סיום חוזה/אופציה, פקיעת בטוחה, פקיעת מסמך ציות",
+        "פדיון חודשי אחוז מפדיון - מלא",
+        "מעקב גבייה חודשי לחוזים קבועים - סימון שולם/לא שולם",
+        "דשבורד ראשי + מרכז פעולות מאוחד"
+      ]
+    },
+    {
+      "phase": 2,
+      "label": "השלמת התמונה הפיננסית והתפעולית",
+      "items": [
+        "חישוב אוטומטי של הצמדה למדד",
+        "תשלומים נלווים (ארנונה/ועד/חשמל) - מעקב אחריות ותשלום",
+        "תהליך סיום/פינוי נכס עם צ'קליסט",
+        "ערוצי התראה נוספים (וואטסאפ/SMS)",
+        "יומן שינויים והרשאות מפורטות"
+      ]
+    },
+    {
+      "phase": 3,
+      "label": "אוטומציה וניתוח מתקדם",
+      "items": [
+        "קריאה חצי-אוטומטית של חוזים (OCR + מסך אישור)",
+        "דוחות: הכנסות לפי תקופה/נכס/לקוח, מגמות לאורך זמן",
+        "הסלמות אוטומטיות על איחורים חוזרים"
+      ]
+    }
+  ],
+
+  "openQuestions": [
+    "האם ללקוח יכולים להיות כמה נכסים/חוזים במקביל, או תמיד יחס אחד-לאחד?",
+    "מקור נתונים למדד המחירים לצרכן - חיבור ל-API של הלמ״ס, או הזנה ידנית חודשית?",
+    "מי אחראי כברירת מחדל על ארנונה/ועד/חשמל (שוכר או משכיר), כשלא הוגדר אחרת בחוזה ספציפי?",
+    "האם המערכת גם מפיקה חשבונית/דרישת תשלום, או רק מחשבת ומתעדת סכום לחיוב? יש כבר מערכת הנהלת חשבונות קיימת להתחבר אליה?",
+    "וואטסאפ כערוץ תזכורות - יש כבר ספק WhatsApp Business API בשימוש בחברה?",
+    "רמות ההרשאה בצוות - שתי רמות (מנהל/איש צוות) מספיקות, או יש תפקידים נוספים?",
+    "מטבע וניסוח - הנחת העבודה היא ₪ ועברית בלבד; נכון?"
+  ],
+
+  "assumptions": [
+    "שוכרים אינם משתמשי מערכת - כל מגע שלהם דרך קישורים חיצוניים ממוקדים",
+    "קריאת חוזים אוטומטית מיושמת כתהליך חצי-אוטומטי עם אישור אנושי, ונדחית לשלב 3",
+    "ברירת המחדל לטווחי ההתראה (למשל 90/60/30 יום) ניתנת להגדרה ולא קבועה בקוד",
+    "הדשבורד ומרכז הפעולות המאוחד הם חלק מליבת שלב 1, לא תוספת מאוחרת"
+  ]
+}
