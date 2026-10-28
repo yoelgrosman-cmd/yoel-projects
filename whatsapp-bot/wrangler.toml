@@ -1,0 +1,28 @@
+name = "assistant-whatsapp-bot"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+# The assistant's instructions and skills (../assistant/**/*.md) are bundled as text.
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+fallthrough = true
+
+[[durable_objects.bindings]]
+name = "HOUSEHOLD"
+class_name = "Household"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Household"]
+
+# Reminders and the weekly summary are checked every 5 minutes.
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+TIMEZONE = "Asia/Jerusalem"
+GRAPH_VERSION = "v23.0"
+# Approved template with one variable, used outside WhatsApp's 24-hour window.
+WHATSAPP_TEMPLATE_NAME = "assistant_update"
+WHATSAPP_TEMPLATE_LANG = "he"

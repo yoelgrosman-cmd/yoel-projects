@@ -1,0 +1,53 @@
+name: Deploy WhatsApp assistant
+
+on:
+  push:
+    branches: [main, ccr-0027a964-ks5g5s]
+    paths: ["whatsapp-bot/**", "assistant/**", ".github/workflows/deploy-whatsapp-bot.yml"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that secrets are set
+        id: check
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "CLOUDFLARE_API_TOKEN is not set yet; skipping deploy (see whatsapp-bot/README.md)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: 22
+      - run: npm ci && npx tsc --noEmit
+        if: steps.check.outputs.ready == 'true'
+        working-directory: whatsapp-bot
+      - uses: cloudflare/wrangler-action@v3
+        if: steps.check.outputs.ready == 'true'
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: whatsapp-bot
+          wranglerVersion: "4.154.0"
+          secrets: |
+            ANTHROPIC_API_KEY
+            WHATSAPP_TOKEN
+            WHATSAPP_PHONE_NUMBER_ID
+            WHATSAPP_APP_SECRET
+            WHATSAPP_VERIFY_TOKEN
+            ALLOWED_NUMBERS
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_APP_SECRET: ${{ secrets.WHATSAPP_APP_SECRET }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          ALLOWED_NUMBERS: ${{ secrets.ALLOWED_NUMBERS }}
