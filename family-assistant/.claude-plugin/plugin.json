@@ -1,0 +1,6 @@
+{
+  "name": "family-assistant",
+  "version": "0.1.0",
+  "description": "A warm, practical family assistant for busy parents. Keeps shopping lists, turns school and gan messages into calendar events and reminders, prepares online carts for approval, and sends a weekly summary.",
+  "author": { "name": "Yoel Grosman" }
+}
