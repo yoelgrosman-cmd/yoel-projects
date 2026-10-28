@@ -1,6 +1,0 @@
-{
-  "name": "personal-agent",
-  "version": "0.1.0",
-  "description": "A personal agent you just text. It runs errands end to end: books travel, restaurants and appointments, orders things, fills forms and follows up for days. It remembers what matters, texts you first when something needs you, and never pays, sends or commits without your explicit approval of the exact action.",
-  "author": { "name": "Yoel Grosman" }
-}

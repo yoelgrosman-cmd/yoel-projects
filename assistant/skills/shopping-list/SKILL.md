@@ -11,4 +11,4 @@ Keep one shared shopping list, grouped by category (produce, dairy, meat & fish,
 - Showing: print the list grouped by category, short, with quantities.
 - Always-on items from the profile are added back after each order.
 - After a change, reply with one line confirming what changed, not the whole list (unless asked).
-- If the owner says "order it" / "תזמין", hand off to the shopping-cart skill.
+- If the owner says "order it" / "תזמין", hand off to the purchases skill.

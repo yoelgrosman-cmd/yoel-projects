@@ -1,0 +1,6 @@
+{
+  "name": "assistant",
+  "version": "0.2.0",
+  "description": "One personal and family assistant you just text. It runs errands end to end (bookings, travel, orders, forms, follow-ups), keeps the shopping list, turns school and gan messages into calendar events with reminders, and sends a weekly summary. It never pays, sends or commits without your explicit approval of the exact action.",
+  "author": { "name": "Yoel Grosman" }
+}
