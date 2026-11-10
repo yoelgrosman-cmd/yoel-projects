@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>סטודיו תמונות</title>
+<meta name="theme-color" content="#1b2a4a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="vendor/cropper.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>סטודיו תמונות</h1>
+  <button id="btnSettings" class="icon-btn" aria-label="הגדרות">⚙︎</button>
+</header>
+
+<!-- ===== Home: queue ===== -->
+<main id="home">
+  <div class="add-row">
+    <label class="big-btn primary">
+      <input id="inCamera" type="file" accept="image/*" capture="environment" hidden>
+      <span class="ico">📷</span><span>צלם</span>
+    </label>
+    <label class="big-btn">
+      <input id="inFiles" type="file" accept="image/*" multiple hidden>
+      <span class="ico">🖼️</span><span>העלה תמונות</span>
+    </label>
+  </div>
+
+  <div id="modelStatus" class="model-status" hidden>
+    <div class="ms-text"></div>
+    <div class="bar"><div class="fill"></div></div>
+  </div>
+
+  <div id="empty" class="empty">
+    <p>צלם או העלה תמונה של מוצר.<br>הרקע יוסר אוטומטית והמוצר יוצב על רקע לבן בפורמט אחיד לאתר.</p>
+  </div>
+
+  <ul id="queue" class="queue"></ul>
+
+  <div id="bulkBar" class="bulk-bar" hidden>
+    <button id="btnProcessAll" class="btn primary">עבד הכל</button>
+    <button id="btnZip" class="btn">הורד הכל (ZIP)</button>
+    <button id="btnClear" class="btn ghost">נקה</button>
+  </div>
+</main>
+
+<!-- ===== Editor ===== -->
+<section id="editor" class="editor" hidden>
+  <div class="ed-head">
+    <button id="edBack" class="btn ghost">→ חזרה</button>
+    <div class="tabs">
+      <button data-tab="crop" class="tab">1. חיתוך וסיבוב</button>
+      <button data-tab="result" class="tab">2. תוצאה</button>
+    </div>
+  </div>
+
+  <!-- Crop -->
+  <div id="tabCrop" class="tab-body">
+    <div class="crop-wrap"><div class="crop-inner"><img id="cropImg" alt=""></div></div>
+    <div class="controls">
+      <div class="row">
+        <button id="rotL" class="btn">↺ 90°</button>
+        <button id="rotR" class="btn">↻ 90°</button>
+        <button id="cropReset" class="btn ghost">איפוס</button>
+      </div>
+      <label class="slider">יישור <output id="straightenVal">0°</output>
+        <input id="straighten" type="range" min="-20" max="20" step="0.5" value="0">
+      </label>
+      <button id="cropApply" class="btn primary wide">החל והסר רקע ←</button>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="tabResult" class="tab-body" hidden>
+    <div id="resultView" class="result-wrap">
+      <canvas id="resultCanvas"></canvas>
+      <div id="busy" class="busy" hidden><div class="spinner"></div><div class="busy-text">מסיר רקע…</div></div>
+    </div>
+
+    <div id="touchView" class="touch-wrap" hidden>
+      <div id="touchScroll" class="touch-scroll"><canvas id="touchCanvas"></canvas></div>
+    </div>
+
+    <div id="adjControls" class="controls">
+      <label class="slider">בהירות <output id="brightVal">0</output>
+        <input id="bright" type="range" min="-30" max="60" step="1" value="0">
+      </label>
+      <label class="slider">ניגודיות <output id="contrastVal">0</output>
+        <input id="contrast" type="range" min="-30" max="40" step="1" value="0">
+      </label>
+      <label class="check"><input id="shadow" type="checkbox"> צל רך מתחת למוצר</label>
+      <div class="row">
+        <button id="btnTouch" class="btn">🖌️ תיקון ידני</button>
+        <button id="btnRedo" class="btn ghost">הסר רקע מחדש</button>
+      </div>
+      <div class="row">
+        <button id="btnDownload" class="btn primary">⬇ הורד</button>
+        <button id="btnShare" class="btn">שתף</button>
+      </div>
+    </div>
+
+    <div id="touchControls" class="controls" hidden>
+      <div class="seg">
+        <button data-mode="erase" class="seg-btn">מחק</button>
+        <button data-mode="restore" class="seg-btn">שחזר</button>
+        <button data-mode="pan" class="seg-btn">הזזה</button>
+      </div>
+      <label class="slider">גודל מברשת <output id="brushVal">30</output>
+        <input id="brush" type="range" min="4" max="120" step="1" value="30">
+      </label>
+      <label class="slider">זום <output id="zoomVal">1×</output>
+        <input id="zoom" type="range" min="1" max="5" step="0.5" value="1">
+      </label>
+      <p class="hint">אזורים באדום יוסרו. "מחק" מסיר שאריות רקע, "שחזר" מחזיר חלקים של המוצר.</p>
+      <div class="row">
+        <button id="touchUndo" class="btn">↶ בטל</button>
+        <button id="touchDone" class="btn primary">סיום</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Settings ===== -->
+<dialog id="settings" class="sheet">
+  <form method="dialog">
+    <h2>הגדרות פורמט</h2>
+    <label class="field">גודל תמונה (ריבוע)
+      <select id="setSize">
+        <option value="1000">1000 × 1000</option>
+        <option value="1200">1200 × 1200</option>
+        <option value="1500">1500 × 1500</option>
+        <option value="2000">2000 × 2000</option>
+      </select>
+    </label>
+    <label class="slider">המוצר ממלא <output id="setFillVal">85%</output>
+      <input id="setFill" type="range" min="60" max="98" step="1">
+    </label>
+    <label class="check"><input id="setShadow" type="checkbox"> צל רך כברירת מחדל</label>
+    <label class="field">פורמט קובץ
+      <select id="setFormat">
+        <option value="jpeg">JPG (מומלץ)</option>
+        <option value="webp">WebP (קל יותר)</option>
+      </select>
+    </label>
+    <p class="hint small">ההגדרות חלות על כל התמונות, כך שכולן ייצאו אחידות.</p>
+    <button class="btn primary wide" value="ok">שמור</button>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="vendor/cropper.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
