@@ -95,6 +95,7 @@ function getSession() {
     const bytes = await fetchModelBytes((p, cached) => {
       fill.style.width = Math.round(p * 100) + '%';
       txt.textContent = cached ? 'טוען את המנוע מהזיכרון…' : `מוריד את מנוע הסרת הרקע (פעם ראשונה בלבד) ${Math.round(p * 100)}%`;
+      if (!$('#busy').hidden) $('#busy .busy-text').textContent = txt.textContent;
     });
     ort.env.wasm.wasmPaths = new URL('./vendor/', import.meta.url).href;
     ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 2) : 1;
@@ -407,26 +408,27 @@ async function renderOutput(item) {
   return c;
 }
 
-const STATUS = { new: 'ממתין', working: 'מעבד…', done: 'מוכן ✓', error: 'שגיאה' };
+const STATUS = { new: 'ממתין', working: 'מעבד', done: 'מוכן', error: 'שגיאה' };
 
 function renderQueue() {
   const ul = $('#queue');
   ul.innerHTML = '';
   for (const it of items) {
     const li = document.createElement('li');
-    li.className = 'q-item';
+    li.className = 'card';
     li.innerHTML = `
-      <img alt="">
-      <div><div class="q-name"></div><div class="q-status ${it.status}"></div></div>
-      <div class="q-actions">
-        <button class="btn" data-act="edit">ערוך</button>
-        ${it.status === 'done' ? '<button class="btn primary" data-act="dl">הורד</button>' : ''}
-        <button class="btn ghost danger" data-act="del">מחק</button>
+      <button class="card-thumb ${it.outUrl ? '' : 'raw'}" aria-label="ערוך"><img alt=""><span class="badge ${it.status}"></span></button>
+      <div class="card-foot">
+        <span class="card-name"></span>
+        ${it.status === 'done' ? '<button class="icon-btn dl" data-act="dl" aria-label="הורד"><svg><use href="#i-download"/></svg></button>' : ''}
+        <button class="icon-btn" data-act="del" aria-label="מחק"><svg><use href="#i-trash"/></svg></button>
       </div>`;
     li.querySelector('img').src = it.outUrl || it.url;
-    li.querySelector('.q-name').textContent = `${it.name}.${outExt()}`;
-    li.querySelector('.q-status').textContent = it.status === 'error' ? `${STATUS.error}: ${it.error}` : STATUS[it.status];
-    li.querySelector('[data-act="edit"]').onclick = () => openEditor(it);
+    li.querySelector('.card-name').textContent = `${it.name}.${outExt()}`;
+    const badge = li.querySelector('.badge');
+    badge.textContent = STATUS[it.status];
+    if (it.status === 'error') badge.title = it.error;
+    li.querySelector('.card-thumb').onclick = () => openEditor(it);
     const dl = li.querySelector('[data-act="dl"]'); if (dl) dl.onclick = () => download(it);
     li.querySelector('[data-act="del"]').onclick = () => {
       items.splice(items.indexOf(it), 1);
@@ -435,9 +437,11 @@ function renderQueue() {
     };
     ul.appendChild(li);
   }
+  const done = items.filter((i) => i.status === 'done').length;
+  $('#binCount').textContent = items.length ? `${done} / ${items.length} מוכנות` : '';
   $('#empty').hidden = items.length > 0;
   $('#bulkBar').hidden = items.length === 0;
-  $('#btnZip').disabled = !items.some((i) => i.status === 'done');
+  $('#btnZip').disabled = !done;
 }
 
 function download(item) {
@@ -491,6 +495,7 @@ $('#btnSettings').onclick = () => {
   $('#setFillVal').textContent = settings.fill + '%';
   $('#setShadow').value = settings.shadowMode; $('#setFormat').value = settings.format;
   dlg.showModal();
+  paintRanges();
 };
 $('#setFill').oninput = (e) => ($('#setFillVal').textContent = e.target.value + '%');
 dlg.addEventListener('close', async () => {
@@ -511,16 +516,39 @@ let cur = null;        // item being edited
 let cropper = null;
 let cropState = { quarter: 0, fine: 0 };
 
-function showTab(name) {
-  $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
-  $('#tabCrop').hidden = name !== 'crop';
-  $('#tabResult').hidden = name !== 'result';
-  if (name === 'crop') initCropper();
+let tool = 'crop';
+function setTool(name) {
+  tool = name;
+  $$('.tool').forEach((t) => t.classList.toggle('active', t.dataset.tool === name));
+  $$('.panel[data-panel]').forEach((p) => p.classList.toggle('active', p.dataset.panel === name));
+  const crop = name === 'crop';
+  $('#stageCrop').hidden = !crop;
+  $('#resultView').hidden = crop;
+  if (crop) initCropper();
+  else if (cropper) { cropper.destroy(); cropper = null; }
+  paintRanges();
 }
-$$('.tab').forEach((t) => (t.onclick = () => {
-  if (t.dataset.tab === 'result' && !cur.mask) { applyCrop(); return; }
-  if (t.dataset.tab === 'result') { showTab('result'); refreshResult(); return; }
-  showTab(t.dataset.tab);
+$$('.tool').forEach((t) => (t.onclick = () => {
+  if (touchOn) return;
+  const name = t.dataset.tool;
+  if (name === tool) return;
+  if (name !== 'crop' && !cur.mask) { applyCrop(name); return; }
+  setTool(name);
+  if (name !== 'crop') refreshResult();
+}));
+
+// slider fill (gold from the neutral point to the thumb)
+function paintRange(el) {
+  const min = +el.min, max = +el.max, v = +el.value;
+  const c = el.dataset.center !== undefined ? +el.dataset.center : min;
+  el.style.setProperty('--p', ((v - min) / (max - min)) * 100 + '%');
+  el.style.setProperty('--c', ((c - min) / (max - min)) * 100 + '%');
+}
+function paintRanges() { $$('.range').forEach(paintRange); }
+document.addEventListener('input', (e) => { if (e.target.classList && e.target.classList.contains('range')) paintRange(e.target); });
+// double-tap a slider to reset it to its neutral value
+$$('.range[data-center]').forEach((el) => el.addEventListener('dblclick', () => {
+  el.value = el.dataset.center; el.dispatchEvent(new Event('input', { bubbles: true }));
 }));
 
 function openEditor(item) {
@@ -530,7 +558,10 @@ function openEditor(item) {
   $('#bright').value = item.adj.brightness; $('#brightVal').textContent = item.adj.brightness;
   $('#contrast').value = item.adj.contrast; $('#contrastVal').textContent = item.adj.contrast;
   syncShadowUI();
-  if (item.mask) { showTab('result'); refreshResult(); } else showTab('crop');
+  $('#edName').textContent = `${item.name}.${outExt()}`;
+  $('#edMeta').textContent = `${settings.size}×${settings.size} · ${outExt().toUpperCase()}`;
+  tool = '';
+  if (item.mask) { setTool('cutout'); refreshResult(); } else setTool('crop');
 }
 
 function closeEditor() {
@@ -578,17 +609,17 @@ $('#rotR').onclick = () => { cropState.quarter = (cropState.quarter + 1) % 4; ap
 $('#straighten').oninput = (e) => { cropState.fine = +e.target.value; $('#straightenVal').textContent = cropState.fine + '°'; applyRotate(); };
 $('#cropReset').onclick = () => { cropState = { quarter: 0, fine: 0 }; $('#straighten').value = 0; $('#straightenVal').textContent = '0°'; if (cropper) { cropper.reset(); cropper.rotateTo(0); fitAll(); } };
 
-async function applyCrop() {
+async function applyCrop(nextTool = 'cutout') {
   if (!cropper) return;
   const item = cur;
   item.crop = { data: cropper.getData(), quarter: cropState.quarter, fine: cropState.fine };
   const c = cropper.getCroppedCanvas({ maxWidth: 4096, maxHeight: 4096, fillColor: '#fff', imageSmoothingQuality: 'high' });
   item.base = downscaleTo(c, BASE_MAX);
   item.mask = null; item.bbox = null; item._adj = null; item._adjKey = null;
-  showTab('result');
+  setTool(typeof nextTool === 'string' ? nextTool : 'cutout');
   await runSegmentation(item);
 }
-$('#cropApply').onclick = applyCrop;
+$('#cropApply').onclick = () => applyCrop('cutout');
 
 async function runSegmentation(item, force = false) {
   $('#busy').hidden = false;
@@ -667,6 +698,26 @@ function drawPreview() {
   rc.addEventListener('pointercancel', end);
 }
 $('#btnRedo').onclick = () => runSegmentation(cur, true);
+
+// before/after: hold to see the original crop
+{
+  const b = $('#btnCompare');
+  const show = (e) => {
+    if (!cur || !cur.base || tool === 'crop' || touchOn) return;
+    e.preventDefault();
+    const rc = $('#resultCanvas'), x = ctx2d(rc), S = rc.width || +settings.size;
+    x.fillStyle = '#16181d'; x.fillRect(0, 0, S, S);
+    const s = Math.min(S / cur.base.width, S / cur.base.height);
+    x.drawImage(cur.base, (S - cur.base.width * s) / 2, (S - cur.base.height * s) / 2, cur.base.width * s, cur.base.height * s);
+    $('#compareTag').hidden = false; b.classList.add('on');
+  };
+  const hide = () => { if (!$('#compareTag').hidden) { $('#compareTag').hidden = true; b.classList.remove('on'); drawPreview(); } };
+  b.addEventListener('pointerdown', show);
+  b.addEventListener('pointerup', hide);
+  b.addEventListener('pointerleave', hide);
+  b.addEventListener('pointercancel', hide);
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
+}
 $('#btnDownload').onclick = () => download(cur);
 $('#btnShare').onclick = () => share(cur);
 
@@ -676,8 +727,11 @@ const tc = $('#touchCanvas');
 
 function setTouchMode(on) {
   touchOn = on;
-  $('#resultView').hidden = on; $('#adjControls').hidden = on;
+  $('#editor').classList.toggle('touching', on);
+  $('#resultView').hidden = on || tool === 'crop';
+  $$('.panel[data-panel]').forEach((p) => p.classList.toggle('active', !on && p.dataset.panel === tool));
   $('#touchView').hidden = !on; $('#touchControls').hidden = !on;
+  if (on) paintRanges();
 }
 function openTouch(m) {
   undoStack = [];

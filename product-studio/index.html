@@ -2,152 +2,228 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>סטודיו תמונות</title>
-<meta name="theme-color" content="#1b2a4a">
+<meta name="theme-color" content="#0b0c0f">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="vendor/cropper.min.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar">
-  <h1>סטודיו תמונות</h1>
-  <button id="btnSettings" class="icon-btn" aria-label="הגדרות">⚙︎</button>
-</header>
 
-<!-- ===== Home: queue ===== -->
-<main id="home">
-  <div class="add-row">
-    <label class="big-btn primary">
-      <input id="inCamera" type="file" accept="image/*" capture="environment" hidden>
-      <span class="ico">📷</span><span>צלם</span>
-    </label>
-    <label class="big-btn">
-      <input id="inFiles" type="file" accept="image/*" multiple hidden>
-      <span class="ico">🖼️</span><span>העלה תמונות</span>
-    </label>
-  </div>
+<!-- Icon sprite (line icons) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0d89c"/><stop offset="1" stop-color="#c3913c"/></linearGradient>
+  </defs>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1.5 14h5M9.5 8h5M17.5 16h5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></symbol>
+  <symbol id="i-wand" viewBox="0 0 24 24"><path d="m21.6 3.6-1.2-1.2a1.2 1.2 0 0 0-1.7 0L2.4 18.6a1.2 1.2 0 0 0 0 1.7l1.2 1.3a1.2 1.2 0 0 0 1.8 0L21.6 5.4a1.2 1.2 0 0 0 0-1.8"/><path d="m14 7 3 3M5 6v4M19 14v4M10 2v2M7 8H3M21 16h-4M11 3H9"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></symbol>
+  <symbol id="i-shadow" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><ellipse cx="12" cy="19.5" rx="8" ry="2"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-rot-l" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.8 9.8 0 0 0-6.7 2.7L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-rot-r" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+  <symbol id="i-lasso" viewBox="0 0 24 24"><path d="M7 22a5 5 0 0 1-2-4"/><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"/><circle cx="5" cy="16" r="2"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><path d="m9.1 11.9 8-8.1a2.9 2.9 0 1 1 4.1 4.1l-8.1 8"/><path d="M7.1 14.9c-1.7 0-3 1.4-3 3 0 1.4-2.5 1.6-2 2 1.1 1.1 2.5 2.1 4 2.1 2.2 0 4-1.8 4-4.1a3 3 0 0 0-3-3"/></symbol>
+  <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21M22 21H7M5 11l9 9"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.8 9.8 0 0 1 6.7 2.7L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.8 9.8 0 0 1-6.7-2.7L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-compare" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M12 3v18"/><path d="M3 15l5-5 4 4" opacity=".55"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/><path d="M19 3v4M21 5h-4"/></symbol>
+  <symbol id="i-stack" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+</svg>
+
+<!-- ===================== Home / project bin ===================== -->
+<main id="home" class="home">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="9" fill="none" stroke="url(#goldGrad)" stroke-width="1.6"/><circle cx="16" cy="16" r="6.5" fill="none" stroke="url(#goldGrad)" stroke-width="1.6"/><circle cx="16" cy="16" r="2.2" fill="url(#goldGrad)"/></svg>
+      <div class="brand-text">
+        <span class="brand-name">STUDIO</span>
+        <span class="brand-sub">סטודיו לתמונות מוצר</span>
+      </div>
+    </div>
+    <button id="btnSettings" class="icon-btn" aria-label="הגדרות פורמט"><svg><use href="#i-sliders"/></svg></button>
+  </header>
+
+  <section class="hero">
+    <p class="eyebrow">צלם · הסר רקע · ייצא</p>
+    <h1>תמונות מוצר<br><span class="gold-text">ברמת סטודיו</span></h1>
+    <p class="lead">רקע לבן נקי, תאורה אחידה ופורמט קבוע לכל המוצרים באתר. הכל קורה על המכשיר, בלי להעלות תמונות לשום מקום.</p>
+    <div class="import">
+      <label class="import-btn primary">
+        <input id="inCamera" type="file" accept="image/*" capture="environment" hidden>
+        <svg><use href="#i-camera"/></svg><span>צלם מוצר</span>
+      </label>
+      <label class="import-btn">
+        <input id="inFiles" type="file" accept="image/*" multiple hidden>
+        <svg><use href="#i-image"/></svg><span>ייבוא מהגלריה</span>
+      </label>
+    </div>
+  </section>
 
   <div id="modelStatus" class="model-status" hidden>
-    <div class="ms-text"></div>
+    <div class="ms-row"><span class="ms-dot"></span><span class="ms-text"></span></div>
     <div class="bar"><div class="fill"></div></div>
   </div>
 
-  <div id="empty" class="empty">
-    <p>צלם או העלה תמונה של מוצר.<br>הרקע יוסר אוטומטית והמוצר יוצב על רקע לבן בפורמט אחיד לאתר.</p>
-  </div>
+  <section class="bin">
+    <div class="bin-head">
+      <h2>הפרויקט</h2>
+      <span id="binCount" class="bin-count"></span>
+    </div>
+    <div id="empty" class="empty">
+      <div class="empty-frame"><svg><use href="#i-image"/></svg></div>
+      <p>עדיין אין תמונות. צלם או ייבא מוצר כדי להתחיל.</p>
+    </div>
+    <ul id="queue" class="grid"></ul>
+  </section>
 
-  <ul id="queue" class="queue"></ul>
-
-  <div id="bulkBar" class="bulk-bar" hidden>
-    <button id="btnProcessAll" class="btn primary">עבד הכל</button>
-    <button id="btnZip" class="btn">הורד הכל (ZIP)</button>
-    <button id="btnClear" class="btn ghost">נקה</button>
+  <div id="bulkBar" class="dock" hidden>
+    <button id="btnClear" class="dock-btn ghost" aria-label="נקה הכל"><svg><use href="#i-trash"/></svg></button>
+    <button id="btnZip" class="dock-btn"><svg><use href="#i-stack"/></svg><span>ייצוא ZIP</span></button>
+    <button id="btnProcessAll" class="dock-btn gold"><svg><use href="#i-sparkle"/></svg><span>עבד הכל</span></button>
   </div>
 </main>
 
-<!-- ===== Editor ===== -->
+<!-- ===================== Editor ===================== -->
 <section id="editor" class="editor" hidden>
-  <div class="ed-head">
-    <button id="edBack" class="btn ghost">→ חזרה</button>
-    <div class="tabs">
-      <button data-tab="crop" class="tab">1. חיתוך וסיבוב</button>
-      <button data-tab="result" class="tab">2. תוצאה</button>
+  <header class="ed-top">
+    <button id="edBack" class="icon-btn flat" aria-label="חזרה"><svg><use href="#i-back"/></svg></button>
+    <div class="ed-title">
+      <span id="edName" class="ed-name"></span>
+      <span id="edMeta" class="ed-meta"></span>
     </div>
-  </div>
+    <button id="btnCompare" class="icon-btn flat" aria-label="לפני / אחרי (לחיצה ארוכה)" title="החזק להשוואה"><svg><use href="#i-compare"/></svg></button>
+    <button id="btnShare" class="icon-btn flat" aria-label="שתף"><svg><use href="#i-share"/></svg></button>
+    <button id="btnDownload" class="pill gold"><svg><use href="#i-download"/></svg><span>ייצוא</span></button>
+  </header>
 
-  <!-- Crop -->
-  <div id="tabCrop" class="tab-body">
-    <div class="crop-wrap"><div class="crop-inner"><img id="cropImg" alt=""></div></div>
-    <div class="controls">
-      <div class="row">
-        <button id="rotL" class="btn">↺ 90°</button>
-        <button id="rotR" class="btn">↻ 90°</button>
-        <button id="cropReset" class="btn ghost">איפוס</button>
-      </div>
-      <label class="slider">יישור <output id="straightenVal">0°</output>
-        <input id="straighten" type="range" min="-20" max="20" step="0.5" value="0">
-      </label>
-      <button id="cropApply" class="btn primary wide">החל והסר רקע ←</button>
-    </div>
-  </div>
+  <!-- Stage -->
+  <div class="stage">
+    <div id="stageCrop" class="stage-crop"><div class="crop-inner"><img id="cropImg" alt=""></div></div>
 
-  <!-- Result -->
-  <div id="tabResult" class="tab-body" hidden>
-    <div id="resultView" class="result-wrap">
-      <canvas id="resultCanvas"></canvas>
-      <div id="busy" class="busy" hidden><div class="spinner"></div><div class="busy-text">מסיר רקע…</div></div>
+    <div id="resultView" class="stage-result">
+      <div class="artboard"><canvas id="resultCanvas"></canvas></div>
+      <div id="compareTag" class="compare-tag" hidden>מקור</div>
     </div>
 
-    <div id="touchView" class="touch-wrap" hidden>
+    <div id="touchView" class="stage-touch" hidden>
       <div id="touchScroll" class="touch-scroll"><canvas id="touchCanvas"></canvas></div>
       <div id="touchBusy" class="busy" hidden><div class="spinner"></div><div class="busy-text">מסיר רקע מתוך הסימון…</div></div>
     </div>
 
-    <div id="adjControls" class="controls">
-      <label class="slider">בהירות <output id="brightVal">0</output>
-        <input id="bright" type="range" min="-30" max="60" step="1" value="0">
+    <div id="busy" class="busy" hidden><div class="spinner"></div><div class="busy-text">מסיר רקע…</div></div>
+  </div>
+
+  <!-- Tool panels -->
+  <div id="panels" class="panels">
+    <div class="panel" data-panel="crop">
+      <div class="tool-row">
+        <button id="rotL" class="tile"><svg><use href="#i-rot-l"/></svg><span>‎-90°</span></button>
+        <button id="rotR" class="tile"><svg><use href="#i-rot-r"/></svg><span>‎+90°</span></button>
+        <button id="cropReset" class="tile"><svg><use href="#i-reset"/></svg><span>איפוס</span></button>
+      </div>
+      <label class="ctl">
+        <span class="ctl-head"><span>יישור</span><output id="straightenVal">0°</output></span>
+        <input id="straighten" class="range ruler" type="range" min="-20" max="20" step="0.5" value="0" data-center="0">
       </label>
-      <label class="slider">ניגודיות <output id="contrastVal">0</output>
-        <input id="contrast" type="range" min="-30" max="40" step="1" value="0">
+      <button id="cropApply" class="cta">החל והסר רקע</button>
+    </div>
+
+    <div class="panel" data-panel="cutout">
+      <div class="tool-row">
+        <button id="btnLasso" class="tile"><svg><use href="#i-lasso"/></svg><span>סמן מוצר</span></button>
+        <button id="btnTouch" class="tile"><svg><use href="#i-brush"/></svg><span>מברשת תיקון</span></button>
+        <button id="btnRedo" class="tile"><svg><use href="#i-refresh"/></svg><span>הסר מחדש</span></button>
+      </div>
+      <p class="hint">יד, תווית או שאריות רקע? <b>סמן מוצר</b> והקף אותו באצבע. לפרטים קטנים השתמש ב<b>מברשת</b>.</p>
+    </div>
+
+    <div class="panel" data-panel="light">
+      <label class="ctl">
+        <span class="ctl-head"><span>בהירות</span><output id="brightVal">0</output></span>
+        <input id="bright" class="range" type="range" min="-30" max="60" step="1" value="0" data-center="0">
       </label>
-      <div class="sh-row">
-        <span class="sh-label">צל</span>
-        <div class="seg">
-          <button data-sh="none" class="sh-btn">ללא</button>
-          <button data-sh="single" class="sh-btn">אחד</button>
-          <button data-sh="split" class="sh-btn">מפוצל</button>
-        </div>
+      <label class="ctl">
+        <span class="ctl-head"><span>ניגודיות</span><output id="contrastVal">0</output></span>
+        <input id="contrast" class="range" type="range" min="-30" max="40" step="1" value="0" data-center="0">
+      </label>
+    </div>
+
+    <div class="panel" data-panel="shadow">
+      <div class="seg">
+        <button data-sh="none" class="sh-btn">ללא</button>
+        <button data-sh="single" class="sh-btn">צל אחד</button>
+        <button data-sh="split" class="sh-btn">מפוצל</button>
       </div>
-      <div id="shadowOpts" class="sh-opts">
-        <label class="slider">גודל צל <output id="shSizeVal">100%</output>
-          <input id="shSize" type="range" min="30" max="220" step="5" value="100">
+      <div id="shadowOpts" class="stack">
+        <label class="ctl">
+          <span class="ctl-head"><span>גודל</span><output id="shSizeVal">100%</output></span>
+          <input id="shSize" class="range" type="range" min="30" max="220" step="5" value="100" data-center="100">
         </label>
-        <label class="slider">עוצמת צל <output id="shStrengthVal">100%</output>
-          <input id="shStrength" type="range" min="20" max="250" step="5" value="100">
+        <label class="ctl">
+          <span class="ctl-head"><span>עוצמה</span><output id="shStrengthVal">100%</output></span>
+          <input id="shStrength" class="range" type="range" min="20" max="250" step="5" value="100" data-center="100">
         </label>
-        <p class="hint">גרור את הצל על התמונה כדי להזיז אותו. "מפוצל" שם צל נפרד מתחת לכל נקודת מגע, למשל כל גלגל. <button id="shReset" type="button" class="link-btn">איפוס צל</button></p>
-      </div>
-      <div class="row">
-        <button id="btnLasso" class="btn">✏️ סמן את המוצר</button>
-        <button id="btnTouch" class="btn">🖌️ תיקון ידני</button>
-      </div>
-      <button id="btnRedo" class="btn ghost">הסר רקע מחדש (אוטומטי)</button>
-      <div class="row">
-        <button id="btnDownload" class="btn primary">⬇ הורד</button>
-        <button id="btnShare" class="btn">שתף</button>
+        <p class="hint">גרור את הצל על התמונה כדי להזיז אותו. <button id="shReset" type="button" class="link-btn">איפוס צל</button></p>
       </div>
     </div>
 
-    <div id="touchControls" class="controls" hidden>
-      <div class="seg">
-        <button data-mode="lasso" class="seg-btn">הקפה</button>
-        <button data-mode="erase" class="seg-btn">מחק</button>
-        <button data-mode="restore" class="seg-btn">שחזר</button>
-        <button data-mode="pan" class="seg-btn">הזזה</button>
+    <!-- Touch-up mode -->
+    <div id="touchControls" class="panel touch-panel" hidden>
+      <div class="seg tools-seg">
+        <button data-mode="lasso" class="seg-btn"><svg><use href="#i-lasso"/></svg><span>הקפה</span></button>
+        <button data-mode="erase" class="seg-btn"><svg><use href="#i-eraser"/></svg><span>מחק</span></button>
+        <button data-mode="restore" class="seg-btn"><svg><use href="#i-brush"/></svg><span>שחזר</span></button>
+        <button data-mode="pan" class="seg-btn"><svg><use href="#i-hand"/></svg><span>הזזה</span></button>
       </div>
-      <label id="brushRow" class="slider">גודל מברשת <output id="brushVal">30</output>
-        <input id="brush" type="range" min="4" max="120" step="1" value="30">
+      <label id="brushRow" class="ctl">
+        <span class="ctl-head"><span>גודל מברשת</span><output id="brushVal">30</output></span>
+        <input id="brush" class="range" type="range" min="4" max="120" step="1" value="30">
       </label>
-      <label class="slider">זום <output id="zoomVal">1×</output>
-        <input id="zoom" type="range" min="1" max="5" step="0.5" value="1">
+      <label class="ctl">
+        <span class="ctl-head"><span>זום</span><output id="zoomVal">1×</output></span>
+        <input id="zoom" class="range" type="range" min="1" max="5" step="0.5" value="1">
       </label>
       <p id="touchHint" class="hint"></p>
-      <div class="row">
-        <button id="touchUndo" class="btn">↶ בטל</button>
-        <button id="touchDone" class="btn primary">סיום</button>
+      <div class="tool-row two">
+        <button id="touchUndo" class="pill"><svg><use href="#i-undo"/></svg><span>בטל</span></button>
+        <button id="touchDone" class="pill gold"><svg><use href="#i-check"/></svg><span>סיום</span></button>
       </div>
     </div>
   </div>
+
+  <!-- Tool bar -->
+  <nav id="toolbar" class="toolbar">
+    <button data-tool="crop" class="tool"><svg><use href="#i-crop"/></svg><span>חיתוך</span></button>
+    <button data-tool="cutout" class="tool"><svg><use href="#i-wand"/></svg><span>רקע</span></button>
+    <button data-tool="light" class="tool"><svg><use href="#i-sun"/></svg><span>אור</span></button>
+    <button data-tool="shadow" class="tool"><svg><use href="#i-shadow"/></svg><span>צל</span></button>
+  </nav>
 </section>
 
-<!-- ===== Settings ===== -->
+<!-- ===================== Settings sheet ===================== -->
 <dialog id="settings" class="sheet">
   <form method="dialog">
-    <h2>הגדרות פורמט</h2>
-    <label class="field">גודל תמונה (ריבוע)
+    <div class="sheet-grip"></div>
+    <h2>פורמט ייצוא</h2>
+    <p class="hint">חל על כל התמונות בפרויקט, כדי שכולן יהיו אחידות.</p>
+    <label class="field">גודל
       <select id="setSize">
         <option value="1000">1000 × 1000</option>
         <option value="1200">1200 × 1200</option>
@@ -155,8 +231,9 @@
         <option value="2000">2000 × 2000</option>
       </select>
     </label>
-    <label class="slider">המוצר ממלא <output id="setFillVal">85%</output>
-      <input id="setFill" type="range" min="60" max="98" step="1">
+    <label class="ctl">
+      <span class="ctl-head"><span>המוצר ממלא</span><output id="setFillVal">85%</output></span>
+      <input id="setFill" class="range" type="range" min="60" max="98" step="1">
     </label>
     <label class="field">צל כברירת מחדל
       <select id="setShadow">
@@ -165,14 +242,13 @@
         <option value="none">ללא צל</option>
       </select>
     </label>
-    <label class="field">פורמט קובץ
+    <label class="field">קובץ
       <select id="setFormat">
-        <option value="jpeg">JPG (מומלץ)</option>
-        <option value="webp">WebP (קל יותר)</option>
+        <option value="jpeg">JPG · מומלץ</option>
+        <option value="webp">WebP · קל יותר</option>
       </select>
     </label>
-    <p class="hint small">ההגדרות חלות על כל התמונות, כך שכולן ייצאו אחידות.</p>
-    <button class="btn primary wide" value="ok">שמור</button>
+    <button class="cta" value="ok">שמור</button>
   </form>
 </dialog>
 
