@@ -318,3 +318,13 @@ b { color: var(--text); font-weight: 600; }
   .panel { max-height: none; }
   .toolbar { grid-column: 2; grid-row: 3; border-inline-start: 1px solid var(--line); }
 }
+
+/* Getting-started steps (empty project) */
+.steps { padding: 18px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+.steps h3 { margin: 0 0 14px; font-size: .95rem; font-weight: 600; }
+.steps ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.steps li { display: flex; gap: 12px; align-items: flex-start; }
+.step-n { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: .85rem; font-weight: 700; color: #1a1408; background: var(--gold-grad); }
+.steps b { font-size: .92rem; }
+.steps p { margin: 3px 0 0; font-size: .84rem; color: var(--muted); line-height: 1.55; }
+.editor.no-result .ed-top .pill, .editor.no-result #btnShare, .editor.no-result #btnCompare { visibility: hidden; }

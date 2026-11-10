@@ -14,7 +14,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="vendor/cropper.min.css">
-<link rel="stylesheet" href="style.css">
+<style>/* fallback until the stylesheet loads */ svg{width:22px;height:22px;fill:none;stroke:currentColor} body{background:#0b0c0f;color:#eceef2;margin:0}</style>
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -88,9 +89,13 @@
       <h2>הפרויקט</h2>
       <span id="binCount" class="bin-count"></span>
     </div>
-    <div id="empty" class="empty">
-      <div class="empty-frame"><svg><use href="#i-image"/></svg></div>
-      <p>עדיין אין תמונות. צלם או ייבא מוצר כדי להתחיל.</p>
+    <div id="empty" class="steps">
+      <h3>איך מתחילים</h3>
+      <ol>
+        <li><span class="step-n">1</span><div><b>צלם או ייבא</b><p>לחץ על "צלם מוצר" או על "ייבוא מהגלריה" למעלה. אפשר לבחור כמה תמונות יחד.</p></div></li>
+        <li><span class="step-n">2</span><div><b>הסר רקע</b><p>חתוך קרוב למוצר אם צריך, ולחץ "החל והסר רקע". הפעם הראשונה לוקחת קצת יותר זמן.</p></div></li>
+        <li><span class="step-n">3</span><div><b>כוונן וייצא</b><p>כוון אור וצל ולחץ "ייצוא". התמונה תישמר בטלפון, מוכנה לאתר.</p></div></li>
+      </ol>
     </div>
     <ul id="queue" class="grid"></ul>
   </section>
@@ -257,6 +262,6 @@
 <div id="toast" class="toast" hidden></div>
 
 <script src="vendor/cropper.min.js"></script>
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=6"></script>
 </body>
 </html>
