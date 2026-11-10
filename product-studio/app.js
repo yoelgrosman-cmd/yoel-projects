@@ -11,9 +11,10 @@ const MODEL_RES = 1024;    // ISNet input resolution
 const MODEL_CACHE = 'studio-model';
 
 // ---------------- settings ----------------
-const DEFAULTS = { size: 1200, fill: 85, shadow: true, format: 'jpeg', quality: 0.9 };
+const DEFAULTS = { size: 1200, fill: 85, shadowMode: 'single', format: 'jpeg', quality: 0.9 };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('studio-settings') || '{}')); } catch {}
+if (typeof settings.shadow === 'boolean') { settings.shadowMode = settings.shadow ? 'single' : 'none'; delete settings.shadow; }
 const saveSettings = () => { try { localStorage.setItem('studio-settings', JSON.stringify(settings)); } catch {} };
 
 // ---------------- helpers ----------------
@@ -222,33 +223,88 @@ function maskBBox(mask) {
 
 function cutout(item) {
   const src = adjustedBase(item);
+  if (item._cut && item._cutSrc === src && item._cutBB === item.bbox) return item._cut;
   const c = makeCanvas(src.width, src.height), x = ctx2d(c);
   x.drawImage(src, 0, 0);
   x.globalCompositeOperation = 'destination-in';
   x.drawImage(item.mask, 0, 0);
+  item._cut = c; item._cutSrc = src; item._cutBB = item.bbox;
   return c;
 }
 
-function compose(item) {
+// ---- shadows ----
+// Each shadow is stored relative to the product box: cx/cy as fractions of the
+// product width/height (cy = 1 is the bottom edge), rx/ry as fractions of the width.
+function singleShadow(bb) {
+  return [{ cx: 0.5, cy: 0.99, rx: 0.48, ry: Math.max(0.035 * bb.h / bb.w, 0.014) }];
+}
+// Find where the product touches the ground (e.g. each bike wheel) from the mask's bottom profile.
+function contactShadows(item) {
+  const bb = item.bbox, m = item.mask;
+  const d = ctx2d(m, { willReadFrequently: true }).getImageData(bb.x, bb.y, bb.w, bb.h).data;
+  const bottom = new Int32Array(bb.w).fill(-1);
+  for (let x = 0; x < bb.w; x++) {
+    for (let y = bb.h - 1; y >= 0; y--) if (d[(y * bb.w + x) * 4 + 3] > 100) { bottom[x] = y; break; }
+  }
+  const maxB = Math.max(...bottom);
+  const band = maxB - Math.max(2, bb.h * 0.035);
+  const gap = Math.max(2, bb.w * 0.02);
+  const groups = [];
+  let g = null;
+  for (let x = 0; x < bb.w; x++) {
+    if (bottom[x] >= band) {
+      if (g && x - g.end <= gap) g.end = x; else { g = { start: x, end: x }; groups.push(g); }
+    }
+  }
+  const minW = bb.w * 0.015;
+  const kept = groups.filter((q) => q.end - q.start >= minW);
+  if (kept.length < 2) return singleShadow(bb);
+  const ry = Math.max(0.03 * bb.h / bb.w, 0.012);
+  return kept.slice(0, 4).map((q) => {
+    const w = (q.end - q.start + 1) / bb.w;
+    return { cx: (q.start + q.end + 1) / 2 / bb.w, cy: 0.995, rx: Math.min(0.3, Math.max(0.07, w * 0.95)), ry };
+  });
+}
+function shadowList(item) {
+  const sh = item.shadow;
+  if (sh.mode === 'none') return [];
+  if (!sh.list || sh.listFor !== item.bbox || sh.listMode !== sh.mode) {
+    sh.list = sh.mode === 'split' ? contactShadows(item) : singleShadow(item.bbox);
+    sh.listFor = item.bbox; sh.listMode = sh.mode;
+  }
+  return sh.list;
+}
+function layout(item) {
   const S = +settings.size;
-  const out = makeCanvas(S, S), x = ctx2d(out);
-  x.fillStyle = '#fff'; x.fillRect(0, 0, S, S);
   const bb = item.bbox || (item.bbox = maskBBox(item.mask));
   const scale = (settings.fill / 100) * S / Math.max(bb.w, bb.h);
   const dw = bb.w * scale, dh = bb.h * scale;
   const dx = (S - dw) / 2;
   let dy = (S - dh) / 2;
-  if (item.shadow) {
-    dy -= S * 0.012;
-    const rx = dw * 0.48, ry = Math.max(dh * 0.035, S * 0.012);
-    const cy = dy + dh - ry * 0.35;
+  if (item.shadow.mode !== 'none') dy -= S * 0.012;
+  return { S, bb, dw, dh, dx, dy };
+}
+function shadowEllipses(item, L) {
+  const k = item.shadow.size / 100;
+  return shadowList(item).map((s) => ({
+    s, x: L.dx + s.cx * L.dw, y: L.dy + s.cy * L.dh, rx: s.rx * L.dw * k, ry: Math.max(2, s.ry * L.dw * k),
+  }));
+}
+
+function compose(item) {
+  const L = layout(item);
+  const { S, bb, dw, dh, dx, dy } = L;
+  const out = makeCanvas(S, S), x = ctx2d(out);
+  x.fillStyle = '#fff'; x.fillRect(0, 0, S, S);
+  const a = item.shadow.strength / 100;
+  for (const e of shadowEllipses(item, L)) {
     x.save();
-    x.translate(S / 2, cy); x.scale(1, ry / rx);
-    const g = x.createRadialGradient(0, 0, 0, 0, 0, rx);
-    g.addColorStop(0, 'rgba(0,0,0,0.22)');
-    g.addColorStop(0.55, 'rgba(0,0,0,0.10)');
+    x.translate(e.x, e.y); x.scale(1, e.ry / e.rx);
+    const g = x.createRadialGradient(0, 0, 0, 0, 0, e.rx);
+    g.addColorStop(0, `rgba(0,0,0,${Math.min(1, 0.24 * a)})`);
+    g.addColorStop(0.55, `rgba(0,0,0,${Math.min(1, 0.11 * a)})`);
     g.addColorStop(1, 'rgba(0,0,0,0)');
-    x.fillStyle = g; x.beginPath(); x.arc(0, 0, rx, 0, Math.PI * 2); x.fill();
+    x.fillStyle = g; x.beginPath(); x.arc(0, 0, e.rx, 0, Math.PI * 2); x.fill();
     x.restore();
   }
   x.imageSmoothingQuality = 'high';
@@ -273,7 +329,8 @@ function addFiles(files) {
     const item = {
       id: ++uid, name: uniqueName(file), file, url: URL.createObjectURL(file),
       base: null, mask: null, bbox: null, crop: null,
-      adj: { brightness: 0, contrast: 0 }, shadow: settings.shadow,
+      adj: { brightness: 0, contrast: 0 },
+      shadow: { mode: settings.shadowMode, size: 100, strength: 100, list: null },
       out: null, outUrl: null, status: 'new', error: '',
     };
     items.push(item);
@@ -395,7 +452,7 @@ const dlg = $('#settings');
 $('#btnSettings').onclick = () => {
   $('#setSize').value = settings.size; $('#setFill').value = settings.fill;
   $('#setFillVal').textContent = settings.fill + '%';
-  $('#setShadow').checked = settings.shadow; $('#setFormat').value = settings.format;
+  $('#setShadow').value = settings.shadowMode; $('#setFormat').value = settings.format;
   dlg.showModal();
 };
 $('#setFill').oninput = (e) => ($('#setFillVal').textContent = e.target.value + '%');
@@ -403,7 +460,7 @@ dlg.addEventListener('close', async () => {
   if (dlg.returnValue !== 'ok') return;
   const changed = settings.size != $('#setSize').value || settings.fill != $('#setFill').value || settings.format !== $('#setFormat').value;
   settings.size = +$('#setSize').value; settings.fill = +$('#setFill').value;
-  settings.shadow = $('#setShadow').checked; settings.format = $('#setFormat').value;
+  settings.shadowMode = $('#setShadow').value; settings.format = $('#setFormat').value;
   saveSettings();
   if (changed) {
     for (const it of items) if (it.status === 'done') await renderOutput(it);
@@ -435,7 +492,7 @@ function openEditor(item) {
   setTouchMode(false);
   $('#bright').value = item.adj.brightness; $('#brightVal').textContent = item.adj.brightness;
   $('#contrast').value = item.adj.contrast; $('#contrastVal').textContent = item.adj.contrast;
-  $('#shadow').checked = item.shadow;
+  syncShadowUI();
   if (item.mask) { showTab('result'); refreshResult(); } else showTab('crop');
 }
 
@@ -518,7 +575,60 @@ function scheduleRefresh() { clearTimeout(refreshTimer); refreshTimer = setTimeo
 
 $('#bright').oninput = (e) => { cur.adj.brightness = +e.target.value; $('#brightVal').textContent = e.target.value; scheduleRefresh(); };
 $('#contrast').oninput = (e) => { cur.adj.contrast = +e.target.value; $('#contrastVal').textContent = e.target.value; scheduleRefresh(); };
-$('#shadow').onchange = (e) => { cur.shadow = e.target.checked; scheduleRefresh(); };
+function syncShadowUI() {
+  const sh = cur.shadow;
+  $$('.sh-btn').forEach((b) => b.classList.toggle('active', b.dataset.sh === sh.mode));
+  $('#shadowOpts').hidden = sh.mode === 'none';
+  $('#shSize').value = sh.size; $('#shSizeVal').textContent = sh.size + '%';
+  $('#shStrength').value = sh.strength; $('#shStrengthVal').textContent = sh.strength + '%';
+}
+$$('.sh-btn').forEach((b) => (b.onclick = () => {
+  cur.shadow.mode = b.dataset.sh; cur.shadow.list = null;
+  syncShadowUI(); refreshResult();
+  if (b.dataset.sh === 'split' && cur.shadow.list && cur.shadow.list.length < 2) toast('לא זוהו כמה נקודות מגע. גרור את הצל למקום הרצוי');
+}));
+$('#shSize').oninput = (e) => { cur.shadow.size = +e.target.value; $('#shSizeVal').textContent = e.target.value + '%'; drawPreview(); scheduleRefresh(); };
+$('#shStrength').oninput = (e) => { cur.shadow.strength = +e.target.value; $('#shStrengthVal').textContent = e.target.value + '%'; drawPreview(); scheduleRefresh(); };
+$('#shReset').onclick = () => { Object.assign(cur.shadow, { size: 100, strength: 100, list: null }); syncShadowUI(); refreshResult(); };
+
+// fast redraw of the preview without encoding a file (used while dragging)
+function drawPreview() {
+  if (!cur || !cur.mask) return;
+  const c = compose(cur), rc = $('#resultCanvas');
+  if (rc.width !== c.width) { rc.width = c.width; rc.height = c.height; }
+  ctx2d(rc).drawImage(c, 0, 0);
+}
+
+// drag a shadow on the result preview
+{
+  const rc = $('#resultCanvas');
+  let drag = null;
+  const pt = (e) => { const r = rc.getBoundingClientRect(); return { x: (e.clientX - r.left) * rc.width / r.width, y: (e.clientY - r.top) * rc.height / r.height, k: rc.width / r.width }; };
+  rc.addEventListener('pointerdown', (e) => {
+    if (!cur || !cur.mask || cur.shadow.mode === 'none') return;
+    const p = pt(e), L = layout(cur);
+    let best = null, bestD = Infinity;
+    for (const el of shadowEllipses(cur, L)) {
+      const rx = Math.max(el.rx, 40 * p.k), ry = Math.max(el.ry * 2.5, 40 * p.k);
+      const d = ((p.x - el.x) / rx) ** 2 + ((p.y - el.y) / ry) ** 2;
+      if (d <= 1 && d < bestD) { best = el; bestD = d; }
+    }
+    if (!best) return;
+    e.preventDefault();
+    rc.setPointerCapture(e.pointerId);
+    drag = { s: best.s, p, cx: best.s.cx, cy: best.s.cy, L };
+  });
+  rc.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const p = pt(e);
+    drag.s.cx = drag.cx + (p.x - drag.p.x) / drag.L.dw;
+    drag.s.cy = Math.min(1.25, Math.max(0.5, drag.cy + (p.y - drag.p.y) / drag.L.dh));
+    drawPreview();
+  });
+  const end = () => { if (drag) { drag = null; refreshResult(); } };
+  rc.addEventListener('pointerup', end);
+  rc.addEventListener('pointercancel', end);
+}
 $('#btnRedo').onclick = () => runSegmentation(cur, true);
 $('#btnDownload').onclick = () => download(cur);
 $('#btnShare').onclick = () => share(cur);

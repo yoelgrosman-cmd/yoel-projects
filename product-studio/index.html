@@ -92,7 +92,23 @@
       <label class="slider">ניגודיות <output id="contrastVal">0</output>
         <input id="contrast" type="range" min="-30" max="40" step="1" value="0">
       </label>
-      <label class="check"><input id="shadow" type="checkbox"> צל רך מתחת למוצר</label>
+      <div class="sh-row">
+        <span class="sh-label">צל</span>
+        <div class="seg">
+          <button data-sh="none" class="sh-btn">ללא</button>
+          <button data-sh="single" class="sh-btn">אחד</button>
+          <button data-sh="split" class="sh-btn">מפוצל</button>
+        </div>
+      </div>
+      <div id="shadowOpts" class="sh-opts">
+        <label class="slider">גודל צל <output id="shSizeVal">100%</output>
+          <input id="shSize" type="range" min="30" max="220" step="5" value="100">
+        </label>
+        <label class="slider">עוצמת צל <output id="shStrengthVal">100%</output>
+          <input id="shStrength" type="range" min="20" max="250" step="5" value="100">
+        </label>
+        <p class="hint">גרור את הצל על התמונה כדי להזיז אותו. "מפוצל" שם צל נפרד מתחת לכל נקודת מגע, למשל כל גלגל. <button id="shReset" type="button" class="link-btn">איפוס צל</button></p>
+      </div>
       <div class="row">
         <button id="btnTouch" class="btn">🖌️ תיקון ידני</button>
         <button id="btnRedo" class="btn ghost">הסר רקע מחדש</button>
@@ -139,7 +155,13 @@
     <label class="slider">המוצר ממלא <output id="setFillVal">85%</output>
       <input id="setFill" type="range" min="60" max="98" step="1">
     </label>
-    <label class="check"><input id="setShadow" type="checkbox"> צל רך כברירת מחדל</label>
+    <label class="field">צל כברירת מחדל
+      <select id="setShadow">
+        <option value="single">צל אחד מתחת למוצר</option>
+        <option value="split">מפוצל (מתחת לכל גלגל)</option>
+        <option value="none">ללא צל</option>
+      </select>
+    </label>
     <label class="field">פורמט קובץ
       <select id="setFormat">
         <option value="jpeg">JPG (מומלץ)</option>
