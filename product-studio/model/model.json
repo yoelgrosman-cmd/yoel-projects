@@ -1,0 +1,11 @@
+{
+ "version": "isnet-medium-1",
+ "size": 88188479,
+ "parts": [
+  "isnet-medium.part0.bin",
+  "isnet-medium.part1.bin",
+  "isnet-medium.part2.bin",
+  "isnet-medium.part3.bin"
+ ],
+ "sha256": "b6e8497ba978a6f5"
+}
