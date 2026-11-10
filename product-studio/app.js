@@ -440,6 +440,7 @@ function renderQueue() {
   const done = items.filter((i) => i.status === 'done').length;
   $('#binCount').textContent = items.length ? `${done} / ${items.length} מוכנות` : '';
   $('#empty').hidden = items.length > 0;
+  $('.bin-head').hidden = items.length === 0;
   $('#bulkBar').hidden = items.length === 0;
   $('#btnZip').disabled = !done;
 }
@@ -463,7 +464,12 @@ async function share(item) {
 
 // ---------------- home actions ----------------
 $('#inCamera').onchange = (e) => { addFiles(e.target.files); e.target.value = ''; const last = items[items.length - 1]; if (last) openEditor(last); };
-$('#inFiles').onchange = (e) => { addFiles(e.target.files); e.target.value = ''; };
+$('#inFiles').onchange = (e) => {
+  const n = e.target.files.length;
+  addFiles(e.target.files); e.target.value = '';
+  if (n === 1) openEditor(items[items.length - 1]);
+  else if (n > 1) toast('לחץ על תמונה כדי לערוך אותה, או על "עבד הכל" לעיבוד אוטומטי של כולן', 4000);
+};
 
 $('#btnProcessAll').onclick = async () => {
   const btn = $('#btnProcessAll'); btn.disabled = true;
@@ -561,6 +567,7 @@ function openEditor(item) {
   $('#edName').textContent = `${item.name}.${outExt()}`;
   $('#edMeta').textContent = `${settings.size}×${settings.size} · ${outExt().toUpperCase()}`;
   tool = '';
+  $('#editor').classList.toggle('no-result', !item.mask);
   if (item.mask) { setTool('cutout'); refreshResult(); } else setTool('crop');
 }
 
@@ -634,6 +641,7 @@ async function runSegmentation(item, force = false) {
 let refreshTimer = 0;
 async function refreshResult() {
   if (!cur || !cur.mask) return;
+  $('#editor').classList.remove('no-result');
   const c = await renderOutput(cur);
   const rc = $('#resultCanvas');
   rc.width = c.width; rc.height = c.height;

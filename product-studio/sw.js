@@ -1,6 +1,6 @@
 // App-shell cache so the tool opens fast and works with a weak connection.
 // The model itself is cached separately by app.js (Cache Storage "studio-model").
-const CACHE = 'studio-shell-v5';
+const CACHE = 'studio-shell-v6';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon.svg',
   'vendor/cropper.min.js', 'vendor/cropper.min.css', 'vendor/fflate.mjs',
   'vendor/ort.webgpu.bundle.min.mjs', 'vendor/ort-wasm-simd-threaded.jsep.mjs', 'vendor/ort-wasm-simd-threaded.jsep.wasm'];
@@ -16,9 +16,9 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/model/')) return;
-  // network first (so updates arrive), cache as fallback
-  e.respondWith(fetch(e.request).then((res) => {
+  // network first, revalidating with the server (never a stale HTTP-cache copy), cache as offline fallback
+  e.respondWith(fetch(e.request, { cache: 'no-cache' }).then((res) => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
     return res;
-  }).catch(() => caches.match(e.request)));
+  }).catch(() => caches.match(e.request, { ignoreSearch: true })));
 });
