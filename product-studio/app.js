@@ -11,9 +11,10 @@ const MODEL_RES = 1024;    // ISNet input resolution
 const MODEL_CACHE = 'studio-model';
 
 // ---------------- settings ----------------
-const DEFAULTS = { size: 1200, fill: 85, shadow: true, format: 'jpeg', quality: 0.9 };
+const DEFAULTS = { size: 1200, fill: 85, shadowMode: 'single', format: 'jpeg', quality: 0.9 };
 const settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('studio-settings') || '{}')); } catch {}
+if (typeof settings.shadow === 'boolean') { settings.shadowMode = settings.shadow ? 'single' : 'none'; delete settings.shadow; }
 const saveSettings = () => { try { localStorage.setItem('studio-settings', JSON.stringify(settings)); } catch {} };
 
 // ---------------- helpers ----------------
@@ -94,6 +95,7 @@ function getSession() {
     const bytes = await fetchModelBytes((p, cached) => {
       fill.style.width = Math.round(p * 100) + '%';
       txt.textContent = cached ? 'טוען את המנוע מהזיכרון…' : `מוריד את מנוע הסרת הרקע (פעם ראשונה בלבד) ${Math.round(p * 100)}%`;
+      if (!$('#busy').hidden) $('#busy .busy-text').textContent = txt.textContent;
     });
     ort.env.wasm.wasmPaths = new URL('./vendor/', import.meta.url).href;
     ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 2) : 1;
@@ -179,6 +181,43 @@ async function segment(base) {
   return mask;
 }
 
+// Run the model on part of the image and return a full-size mask.
+// Everything outside the region (and outside the polygon, if given) is removed.
+async function segmentRegion(base, r, poly) {
+  // The model sees the region in its natural context (masking it to white makes the
+  // outline itself look like an object); the polygon is applied afterwards as a hard limit.
+  const region = makeCanvas(r.w, r.h);
+  ctx2d(region).drawImage(base, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+  const m = await segment(region);
+  const full = makeCanvas(base.width, base.height), f = ctx2d(full);
+  f.drawImage(m, r.x, r.y);
+  if (poly) {
+    f.globalCompositeOperation = 'destination-in';
+    f.fillStyle = '#000'; tracePoly(f, poly, 0, 0); f.fill();
+  }
+  return full;
+}
+function tracePoly(x, poly, ox, oy) {
+  x.beginPath();
+  poly.forEach((p, i) => (i ? x.lineTo(p.x + ox, p.y + oy) : x.moveTo(p.x + ox, p.y + oy)));
+  x.closePath();
+}
+function padRect(bb, pad, W, H) {
+  const x0 = Math.max(0, Math.floor(bb.x - pad)), y0 = Math.max(0, Math.floor(bb.y - pad));
+  const x1 = Math.min(W, Math.ceil(bb.x + bb.w + pad)), y1 = Math.min(H, Math.ceil(bb.y + bb.h + pad));
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+// Two passes: find the product, then zoom in on it and run again for cleaner edges
+// and fewer leftovers from the surroundings.
+async function segmentRefined(base) {
+  const m1 = await segment(base);
+  const bb = maskBBox(m1);
+  const W = base.width, H = base.height;
+  if (bb.w < 16 || bb.h < 16 || bb.w * bb.h > 0.75 * W * H) return m1;
+  const r = padRect(bb, 0.08 * Math.max(bb.w, bb.h), W, H);
+  return segmentRegion(base, r, null);
+}
+
 // ---------------- adjustments & compose ----------------
 function adjustedBase(item) {
   const { brightness: b, contrast: k } = item.adj;
@@ -222,33 +261,88 @@ function maskBBox(mask) {
 
 function cutout(item) {
   const src = adjustedBase(item);
+  if (item._cut && item._cutSrc === src && item._cutBB === item.bbox) return item._cut;
   const c = makeCanvas(src.width, src.height), x = ctx2d(c);
   x.drawImage(src, 0, 0);
   x.globalCompositeOperation = 'destination-in';
   x.drawImage(item.mask, 0, 0);
+  item._cut = c; item._cutSrc = src; item._cutBB = item.bbox;
   return c;
 }
 
-function compose(item) {
+// ---- shadows ----
+// Each shadow is stored relative to the product box: cx/cy as fractions of the
+// product width/height (cy = 1 is the bottom edge), rx/ry as fractions of the width.
+function singleShadow(bb) {
+  return [{ cx: 0.5, cy: 0.99, rx: 0.48, ry: Math.max(0.035 * bb.h / bb.w, 0.014) }];
+}
+// Find where the product touches the ground (e.g. each bike wheel) from the mask's bottom profile.
+function contactShadows(item) {
+  const bb = item.bbox, m = item.mask;
+  const d = ctx2d(m, { willReadFrequently: true }).getImageData(bb.x, bb.y, bb.w, bb.h).data;
+  const bottom = new Int32Array(bb.w).fill(-1);
+  for (let x = 0; x < bb.w; x++) {
+    for (let y = bb.h - 1; y >= 0; y--) if (d[(y * bb.w + x) * 4 + 3] > 100) { bottom[x] = y; break; }
+  }
+  const maxB = Math.max(...bottom);
+  const band = maxB - Math.max(2, bb.h * 0.035);
+  const gap = Math.max(2, bb.w * 0.02);
+  const groups = [];
+  let g = null;
+  for (let x = 0; x < bb.w; x++) {
+    if (bottom[x] >= band) {
+      if (g && x - g.end <= gap) g.end = x; else { g = { start: x, end: x }; groups.push(g); }
+    }
+  }
+  const minW = bb.w * 0.015;
+  const kept = groups.filter((q) => q.end - q.start >= minW);
+  if (kept.length < 2) return singleShadow(bb);
+  const ry = Math.max(0.03 * bb.h / bb.w, 0.012);
+  return kept.slice(0, 4).map((q) => {
+    const w = (q.end - q.start + 1) / bb.w;
+    return { cx: (q.start + q.end + 1) / 2 / bb.w, cy: 0.995, rx: Math.min(0.3, Math.max(0.07, w * 0.95)), ry };
+  });
+}
+function shadowList(item) {
+  const sh = item.shadow;
+  if (sh.mode === 'none') return [];
+  if (!sh.list || sh.listFor !== item.bbox || sh.listMode !== sh.mode) {
+    sh.list = sh.mode === 'split' ? contactShadows(item) : singleShadow(item.bbox);
+    sh.listFor = item.bbox; sh.listMode = sh.mode;
+  }
+  return sh.list;
+}
+function layout(item) {
   const S = +settings.size;
-  const out = makeCanvas(S, S), x = ctx2d(out);
-  x.fillStyle = '#fff'; x.fillRect(0, 0, S, S);
   const bb = item.bbox || (item.bbox = maskBBox(item.mask));
   const scale = (settings.fill / 100) * S / Math.max(bb.w, bb.h);
   const dw = bb.w * scale, dh = bb.h * scale;
   const dx = (S - dw) / 2;
   let dy = (S - dh) / 2;
-  if (item.shadow) {
-    dy -= S * 0.012;
-    const rx = dw * 0.48, ry = Math.max(dh * 0.035, S * 0.012);
-    const cy = dy + dh - ry * 0.35;
+  if (item.shadow.mode !== 'none') dy -= S * 0.012;
+  return { S, bb, dw, dh, dx, dy };
+}
+function shadowEllipses(item, L) {
+  const k = item.shadow.size / 100;
+  return shadowList(item).map((s) => ({
+    s, x: L.dx + s.cx * L.dw, y: L.dy + s.cy * L.dh, rx: s.rx * L.dw * k, ry: Math.max(2, s.ry * L.dw * k),
+  }));
+}
+
+function compose(item) {
+  const L = layout(item);
+  const { S, bb, dw, dh, dx, dy } = L;
+  const out = makeCanvas(S, S), x = ctx2d(out);
+  x.fillStyle = '#fff'; x.fillRect(0, 0, S, S);
+  const a = item.shadow.strength / 100;
+  for (const e of shadowEllipses(item, L)) {
     x.save();
-    x.translate(S / 2, cy); x.scale(1, ry / rx);
-    const g = x.createRadialGradient(0, 0, 0, 0, 0, rx);
-    g.addColorStop(0, 'rgba(0,0,0,0.22)');
-    g.addColorStop(0.55, 'rgba(0,0,0,0.10)');
+    x.translate(e.x, e.y); x.scale(1, e.ry / e.rx);
+    const g = x.createRadialGradient(0, 0, 0, 0, 0, e.rx);
+    g.addColorStop(0, `rgba(0,0,0,${Math.min(1, 0.24 * a)})`);
+    g.addColorStop(0.55, `rgba(0,0,0,${Math.min(1, 0.11 * a)})`);
     g.addColorStop(1, 'rgba(0,0,0,0)');
-    x.fillStyle = g; x.beginPath(); x.arc(0, 0, rx, 0, Math.PI * 2); x.fill();
+    x.fillStyle = g; x.beginPath(); x.arc(0, 0, e.rx, 0, Math.PI * 2); x.fill();
     x.restore();
   }
   x.imageSmoothingQuality = 'high';
@@ -273,7 +367,8 @@ function addFiles(files) {
     const item = {
       id: ++uid, name: uniqueName(file), file, url: URL.createObjectURL(file),
       base: null, mask: null, bbox: null, crop: null,
-      adj: { brightness: 0, contrast: 0 }, shadow: settings.shadow,
+      adj: { brightness: 0, contrast: 0 },
+      shadow: { mode: settings.shadowMode, size: 100, strength: 100, list: null },
       out: null, outUrl: null, status: 'new', error: '',
     };
     items.push(item);
@@ -293,7 +388,7 @@ async function processItem(item, { force = false } = {}) {
   try {
     await ensureBase(item);
     if (!item.mask || force) {
-      item.mask = await segment(item.base);
+      item.mask = await segmentRefined(item.base);
       item.bbox = null;
     }
     await renderOutput(item);
@@ -313,26 +408,27 @@ async function renderOutput(item) {
   return c;
 }
 
-const STATUS = { new: 'ממתין', working: 'מעבד…', done: 'מוכן ✓', error: 'שגיאה' };
+const STATUS = { new: 'ממתין', working: 'מעבד', done: 'מוכן', error: 'שגיאה' };
 
 function renderQueue() {
   const ul = $('#queue');
   ul.innerHTML = '';
   for (const it of items) {
     const li = document.createElement('li');
-    li.className = 'q-item';
+    li.className = 'card';
     li.innerHTML = `
-      <img alt="">
-      <div><div class="q-name"></div><div class="q-status ${it.status}"></div></div>
-      <div class="q-actions">
-        <button class="btn" data-act="edit">ערוך</button>
-        ${it.status === 'done' ? '<button class="btn primary" data-act="dl">הורד</button>' : ''}
-        <button class="btn ghost danger" data-act="del">מחק</button>
+      <button class="card-thumb ${it.outUrl ? '' : 'raw'}" aria-label="ערוך"><img alt=""><span class="badge ${it.status}"></span></button>
+      <div class="card-foot">
+        <span class="card-name"></span>
+        ${it.status === 'done' ? '<button class="icon-btn dl" data-act="dl" aria-label="הורד"><svg><use href="#i-download"/></svg></button>' : ''}
+        <button class="icon-btn" data-act="del" aria-label="מחק"><svg><use href="#i-trash"/></svg></button>
       </div>`;
     li.querySelector('img').src = it.outUrl || it.url;
-    li.querySelector('.q-name').textContent = `${it.name}.${outExt()}`;
-    li.querySelector('.q-status').textContent = it.status === 'error' ? `${STATUS.error}: ${it.error}` : STATUS[it.status];
-    li.querySelector('[data-act="edit"]').onclick = () => openEditor(it);
+    li.querySelector('.card-name').textContent = `${it.name}.${outExt()}`;
+    const badge = li.querySelector('.badge');
+    badge.textContent = STATUS[it.status];
+    if (it.status === 'error') badge.title = it.error;
+    li.querySelector('.card-thumb').onclick = () => openEditor(it);
     const dl = li.querySelector('[data-act="dl"]'); if (dl) dl.onclick = () => download(it);
     li.querySelector('[data-act="del"]').onclick = () => {
       items.splice(items.indexOf(it), 1);
@@ -341,9 +437,11 @@ function renderQueue() {
     };
     ul.appendChild(li);
   }
+  const done = items.filter((i) => i.status === 'done').length;
+  $('#binCount').textContent = items.length ? `${done} / ${items.length} מוכנות` : '';
   $('#empty').hidden = items.length > 0;
   $('#bulkBar').hidden = items.length === 0;
-  $('#btnZip').disabled = !items.some((i) => i.status === 'done');
+  $('#btnZip').disabled = !done;
 }
 
 function download(item) {
@@ -379,7 +477,7 @@ $('#btnZip').onclick = async () => {
   for (const it of items) if (it.out) files[`${it.name}.${outExt()}`] = [new Uint8Array(await it.out.arrayBuffer()), { level: 0 }];
   const zip = zipSync(files);
   const url = URL.createObjectURL(new Blob([zip], { type: 'application/zip' }));
-  const a = document.createElement('a'); a.href = url; a.download = 'product-photos.zip';
+  const a = document.createElement('a'); a.href = url; a.download = 'bilu-studio-photos.zip';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
@@ -395,15 +493,16 @@ const dlg = $('#settings');
 $('#btnSettings').onclick = () => {
   $('#setSize').value = settings.size; $('#setFill').value = settings.fill;
   $('#setFillVal').textContent = settings.fill + '%';
-  $('#setShadow').checked = settings.shadow; $('#setFormat').value = settings.format;
+  $('#setShadow').value = settings.shadowMode; $('#setFormat').value = settings.format;
   dlg.showModal();
+  paintRanges();
 };
 $('#setFill').oninput = (e) => ($('#setFillVal').textContent = e.target.value + '%');
 dlg.addEventListener('close', async () => {
   if (dlg.returnValue !== 'ok') return;
   const changed = settings.size != $('#setSize').value || settings.fill != $('#setFill').value || settings.format !== $('#setFormat').value;
   settings.size = +$('#setSize').value; settings.fill = +$('#setFill').value;
-  settings.shadow = $('#setShadow').checked; settings.format = $('#setFormat').value;
+  settings.shadowMode = $('#setShadow').value; settings.format = $('#setFormat').value;
   saveSettings();
   if (changed) {
     for (const it of items) if (it.status === 'done') await renderOutput(it);
@@ -417,16 +516,39 @@ let cur = null;        // item being edited
 let cropper = null;
 let cropState = { quarter: 0, fine: 0 };
 
-function showTab(name) {
-  $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
-  $('#tabCrop').hidden = name !== 'crop';
-  $('#tabResult').hidden = name !== 'result';
-  if (name === 'crop') initCropper();
+let tool = 'crop';
+function setTool(name) {
+  tool = name;
+  $$('.tool').forEach((t) => t.classList.toggle('active', t.dataset.tool === name));
+  $$('.panel[data-panel]').forEach((p) => p.classList.toggle('active', p.dataset.panel === name));
+  const crop = name === 'crop';
+  $('#stageCrop').hidden = !crop;
+  $('#resultView').hidden = crop;
+  if (crop) initCropper();
+  else if (cropper) { cropper.destroy(); cropper = null; }
+  paintRanges();
 }
-$$('.tab').forEach((t) => (t.onclick = () => {
-  if (t.dataset.tab === 'result' && !cur.mask) { applyCrop(); return; }
-  if (t.dataset.tab === 'result') { showTab('result'); refreshResult(); return; }
-  showTab(t.dataset.tab);
+$$('.tool').forEach((t) => (t.onclick = () => {
+  if (touchOn) return;
+  const name = t.dataset.tool;
+  if (name === tool) return;
+  if (name !== 'crop' && !cur.mask) { applyCrop(name); return; }
+  setTool(name);
+  if (name !== 'crop') refreshResult();
+}));
+
+// slider fill (gold from the neutral point to the thumb)
+function paintRange(el) {
+  const min = +el.min, max = +el.max, v = +el.value;
+  const c = el.dataset.center !== undefined ? +el.dataset.center : min;
+  el.style.setProperty('--p', ((v - min) / (max - min)) * 100 + '%');
+  el.style.setProperty('--c', ((c - min) / (max - min)) * 100 + '%');
+}
+function paintRanges() { $$('.range').forEach(paintRange); }
+document.addEventListener('input', (e) => { if (e.target.classList && e.target.classList.contains('range')) paintRange(e.target); });
+// double-tap a slider to reset it to its neutral value
+$$('.range[data-center]').forEach((el) => el.addEventListener('dblclick', () => {
+  el.value = el.dataset.center; el.dispatchEvent(new Event('input', { bubbles: true }));
 }));
 
 function openEditor(item) {
@@ -435,8 +557,11 @@ function openEditor(item) {
   setTouchMode(false);
   $('#bright').value = item.adj.brightness; $('#brightVal').textContent = item.adj.brightness;
   $('#contrast').value = item.adj.contrast; $('#contrastVal').textContent = item.adj.contrast;
-  $('#shadow').checked = item.shadow;
-  if (item.mask) { showTab('result'); refreshResult(); } else showTab('crop');
+  syncShadowUI();
+  $('#edName').textContent = `${item.name}.${outExt()}`;
+  $('#edMeta').textContent = `${settings.size}×${settings.size} · ${outExt().toUpperCase()}`;
+  tool = '';
+  if (item.mask) { setTool('cutout'); refreshResult(); } else setTool('crop');
 }
 
 function closeEditor() {
@@ -484,17 +609,17 @@ $('#rotR').onclick = () => { cropState.quarter = (cropState.quarter + 1) % 4; ap
 $('#straighten').oninput = (e) => { cropState.fine = +e.target.value; $('#straightenVal').textContent = cropState.fine + '°'; applyRotate(); };
 $('#cropReset').onclick = () => { cropState = { quarter: 0, fine: 0 }; $('#straighten').value = 0; $('#straightenVal').textContent = '0°'; if (cropper) { cropper.reset(); cropper.rotateTo(0); fitAll(); } };
 
-async function applyCrop() {
+async function applyCrop(nextTool = 'cutout') {
   if (!cropper) return;
   const item = cur;
   item.crop = { data: cropper.getData(), quarter: cropState.quarter, fine: cropState.fine };
   const c = cropper.getCroppedCanvas({ maxWidth: 4096, maxHeight: 4096, fillColor: '#fff', imageSmoothingQuality: 'high' });
   item.base = downscaleTo(c, BASE_MAX);
   item.mask = null; item.bbox = null; item._adj = null; item._adjKey = null;
-  showTab('result');
+  setTool(typeof nextTool === 'string' ? nextTool : 'cutout');
   await runSegmentation(item);
 }
-$('#cropApply').onclick = applyCrop;
+$('#cropApply').onclick = () => applyCrop('cutout');
 
 async function runSegmentation(item, force = false) {
   $('#busy').hidden = false;
@@ -518,8 +643,81 @@ function scheduleRefresh() { clearTimeout(refreshTimer); refreshTimer = setTimeo
 
 $('#bright').oninput = (e) => { cur.adj.brightness = +e.target.value; $('#brightVal').textContent = e.target.value; scheduleRefresh(); };
 $('#contrast').oninput = (e) => { cur.adj.contrast = +e.target.value; $('#contrastVal').textContent = e.target.value; scheduleRefresh(); };
-$('#shadow').onchange = (e) => { cur.shadow = e.target.checked; scheduleRefresh(); };
+function syncShadowUI() {
+  const sh = cur.shadow;
+  $$('.sh-btn').forEach((b) => b.classList.toggle('active', b.dataset.sh === sh.mode));
+  $('#shadowOpts').hidden = sh.mode === 'none';
+  $('#shSize').value = sh.size; $('#shSizeVal').textContent = sh.size + '%';
+  $('#shStrength').value = sh.strength; $('#shStrengthVal').textContent = sh.strength + '%';
+}
+$$('.sh-btn').forEach((b) => (b.onclick = () => {
+  cur.shadow.mode = b.dataset.sh; cur.shadow.list = null;
+  syncShadowUI(); refreshResult();
+  if (b.dataset.sh === 'split' && cur.shadow.list && cur.shadow.list.length < 2) toast('לא זוהו כמה נקודות מגע. גרור את הצל למקום הרצוי');
+}));
+$('#shSize').oninput = (e) => { cur.shadow.size = +e.target.value; $('#shSizeVal').textContent = e.target.value + '%'; drawPreview(); scheduleRefresh(); };
+$('#shStrength').oninput = (e) => { cur.shadow.strength = +e.target.value; $('#shStrengthVal').textContent = e.target.value + '%'; drawPreview(); scheduleRefresh(); };
+$('#shReset').onclick = () => { Object.assign(cur.shadow, { size: 100, strength: 100, list: null }); syncShadowUI(); refreshResult(); };
+
+// fast redraw of the preview without encoding a file (used while dragging)
+function drawPreview() {
+  if (!cur || !cur.mask) return;
+  const c = compose(cur), rc = $('#resultCanvas');
+  if (rc.width !== c.width) { rc.width = c.width; rc.height = c.height; }
+  ctx2d(rc).drawImage(c, 0, 0);
+}
+
+// drag a shadow on the result preview
+{
+  const rc = $('#resultCanvas');
+  let drag = null;
+  const pt = (e) => { const r = rc.getBoundingClientRect(); return { x: (e.clientX - r.left) * rc.width / r.width, y: (e.clientY - r.top) * rc.height / r.height, k: rc.width / r.width }; };
+  rc.addEventListener('pointerdown', (e) => {
+    if (!cur || !cur.mask || cur.shadow.mode === 'none') return;
+    const p = pt(e), L = layout(cur);
+    let best = null, bestD = Infinity;
+    for (const el of shadowEllipses(cur, L)) {
+      const rx = Math.max(el.rx, 40 * p.k), ry = Math.max(el.ry * 2.5, 40 * p.k);
+      const d = ((p.x - el.x) / rx) ** 2 + ((p.y - el.y) / ry) ** 2;
+      if (d <= 1 && d < bestD) { best = el; bestD = d; }
+    }
+    if (!best) return;
+    e.preventDefault();
+    rc.setPointerCapture(e.pointerId);
+    drag = { s: best.s, p, cx: best.s.cx, cy: best.s.cy, L };
+  });
+  rc.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const p = pt(e);
+    drag.s.cx = drag.cx + (p.x - drag.p.x) / drag.L.dw;
+    drag.s.cy = Math.min(1.25, Math.max(0.5, drag.cy + (p.y - drag.p.y) / drag.L.dh));
+    drawPreview();
+  });
+  const end = () => { if (drag) { drag = null; refreshResult(); } };
+  rc.addEventListener('pointerup', end);
+  rc.addEventListener('pointercancel', end);
+}
 $('#btnRedo').onclick = () => runSegmentation(cur, true);
+
+// before/after: hold to see the original crop
+{
+  const b = $('#btnCompare');
+  const show = (e) => {
+    if (!cur || !cur.base || tool === 'crop' || touchOn) return;
+    e.preventDefault();
+    const rc = $('#resultCanvas'), x = ctx2d(rc), S = rc.width || +settings.size;
+    x.fillStyle = '#16181d'; x.fillRect(0, 0, S, S);
+    const s = Math.min(S / cur.base.width, S / cur.base.height);
+    x.drawImage(cur.base, (S - cur.base.width * s) / 2, (S - cur.base.height * s) / 2, cur.base.width * s, cur.base.height * s);
+    $('#compareTag').hidden = false; b.classList.add('on');
+  };
+  const hide = () => { if (!$('#compareTag').hidden) { $('#compareTag').hidden = true; b.classList.remove('on'); drawPreview(); } };
+  b.addEventListener('pointerdown', show);
+  b.addEventListener('pointerup', hide);
+  b.addEventListener('pointerleave', hide);
+  b.addEventListener('pointercancel', hide);
+  b.addEventListener('contextmenu', (e) => e.preventDefault());
+}
 $('#btnDownload').onclick = () => download(cur);
 $('#btnShare').onclick = () => share(cur);
 
@@ -529,21 +727,30 @@ const tc = $('#touchCanvas');
 
 function setTouchMode(on) {
   touchOn = on;
-  $('#resultView').hidden = on; $('#adjControls').hidden = on;
+  $('#editor').classList.toggle('touching', on);
+  $('#resultView').hidden = on || tool === 'crop';
+  $$('.panel[data-panel]').forEach((p) => p.classList.toggle('active', !on && p.dataset.panel === tool));
   $('#touchView').hidden = !on; $('#touchControls').hidden = !on;
+  if (on) paintRanges();
 }
-$('#btnTouch').onclick = () => {
+function openTouch(m) {
   undoStack = [];
   setTouchMode(true);
-  setMode('erase');
+  setMode(m);
   tc.width = cur.base.width; tc.height = cur.base.height;
   applyZoom();
   drawTouch();
-};
+}
+$('#btnTouch').onclick = () => openTouch('erase');
+$('#btnLasso').onclick = () => openTouch('lasso');
 function setMode(m) {
   mode = m;
   $$('.seg-btn').forEach((b) => b.classList.toggle('active', b.dataset.mode === m));
   $('#touchScroll').classList.toggle('pan', m === 'pan');
+  $('#brushRow').hidden = m === 'lasso' || m === 'pan';
+  $('#touchHint').textContent = m === 'lasso'
+    ? 'הקף את כל המוצר באצבע בקו אחד רציף, עם קצת רווח מסביב. לא צריך להיות מדויק, אבל כל מה שמחוץ לקו יוסר (למשל יד או תווית).'
+    : 'אזורים באדום יוסרו. "מחק" מסיר שאריות רקע, "שחזר" מחזיר חלקים של המוצר.';
 }
 $$('.seg-btn').forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
 
@@ -572,6 +779,15 @@ function drawTouch() {
   o.globalCompositeOperation = 'destination-out';
   o.drawImage(cur.mask, 0, 0);
   x.drawImage(ov, 0, 0);
+  if (lassoPts && lassoPts.length > 1) {
+    const k = tc.width / tc.getBoundingClientRect().width;
+    x.save();
+    tracePoly(x, lassoPts, 0, 0);
+    x.fillStyle = 'rgba(47,124,246,0.12)'; x.fill();
+    x.lineWidth = 3 * k; x.strokeStyle = '#fff'; x.stroke();
+    x.setLineDash([8 * k, 6 * k]); x.strokeStyle = '#2f7cf6'; x.stroke();
+    x.restore();
+  }
 }
 function queueDraw() { if (!drawQueued) { drawQueued = true; requestAnimationFrame(drawTouch); } }
 
@@ -598,17 +814,52 @@ function strokeTo(p) {
   }
   lastPt = p;
 }
-tc.addEventListener('pointerdown', (e) => {
-  if (mode === 'pan' || !touchOn) return;
-  e.preventDefault();
-  tc.setPointerCapture(e.pointerId);
-  painting = true; lastPt = null;
+let lassoPts = null, lassoBusy = false;
+function pushUndo() {
   const snap = makeCanvas(cur.mask.width, cur.mask.height); ctx2d(snap).drawImage(cur.mask, 0, 0);
   undoStack.push(snap); if (undoStack.length > 4) undoStack.shift();
+}
+async function applyLasso(pts) {
+  const W = cur.base.width, H = cur.base.height;
+  let x0 = W, y0 = H, x1 = 0, y1 = 0;
+  for (const p of pts) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+  if (x1 - x0 < 20 || y1 - y0 < 20) { lassoPts = null; drawTouch(); toast('הקו קטן מדי, נסה שוב'); return; }
+  lassoBusy = true; $('#touchBusy').hidden = false;
+  await nextFrame();
+  try {
+    pushUndo();
+    const r = padRect({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, 2, W, H);
+    const m = await segmentRegion(cur.base, r, pts);
+    const mx = ctx2d(cur.mask); mx.clearRect(0, 0, W, H); mx.drawImage(m, 0, 0);
+    cur.bbox = null;
+    setMode('erase');
+    toast('בוצע. אפשר להמשיך לתקן במברשת או ללחוץ "סיום"');
+  } catch (e) { console.error(e); toast('שגיאה: ' + (e.message || e), 5000); }
+  lassoBusy = false; lassoPts = null; $('#touchBusy').hidden = true;
+  drawTouch();
+}
+tc.addEventListener('pointerdown', (e) => {
+  if (mode === 'pan' || !touchOn || lassoBusy) return;
+  e.preventDefault();
+  tc.setPointerCapture(e.pointerId);
+  if (mode === 'lasso') { const p = toCanvasPt(e); lassoPts = [{ x: p.x, y: p.y }]; painting = true; queueDraw(); return; }
+  painting = true; lastPt = null;
+  pushUndo();
   strokeTo(toCanvasPt(e)); queueDraw();
 });
-tc.addEventListener('pointermove', (e) => { if (!painting) return; strokeTo(toCanvasPt(e)); queueDraw(); });
-const endStroke = () => { painting = false; lastPt = null; };
+tc.addEventListener('pointermove', (e) => {
+  if (!painting) return;
+  const p = toCanvasPt(e);
+  if (mode === 'lasso') {
+    const l = lassoPts[lassoPts.length - 1];
+    if (Math.hypot(p.x - l.x, p.y - l.y) > 3 * p.k) lassoPts.push({ x: p.x, y: p.y });
+  } else strokeTo(p);
+  queueDraw();
+});
+const endStroke = () => {
+  painting = false; lastPt = null;
+  if (mode === 'lasso' && lassoPts) { if (lassoPts.length > 8) applyLasso(lassoPts); else { lassoPts = null; drawTouch(); } }
+};
 tc.addEventListener('pointerup', endStroke);
 tc.addEventListener('pointercancel', endStroke);
 
