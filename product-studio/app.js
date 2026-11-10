@@ -477,7 +477,7 @@ $('#btnZip').onclick = async () => {
   for (const it of items) if (it.out) files[`${it.name}.${outExt()}`] = [new Uint8Array(await it.out.arrayBuffer()), { level: 0 }];
   const zip = zipSync(files);
   const url = URL.createObjectURL(new Blob([zip], { type: 'application/zip' }));
-  const a = document.createElement('a'); a.href = url; a.download = 'product-photos.zip';
+  const a = document.createElement('a'); a.href = url; a.download = 'bilu-studio-photos.zip';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 };

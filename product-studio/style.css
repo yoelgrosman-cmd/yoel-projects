@@ -118,7 +118,8 @@ b { color: var(--text); font-weight: 600; }
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand-mark { width: 36px; height: 36px; stroke: none; }
 .brand-text { display: grid; line-height: 1.15; }
-.brand-name { font-weight: 300; letter-spacing: .42em; font-size: .95rem; color: var(--gold-hi); direction: ltr; text-align: right; }
+.brand-name b { font-weight: 600; color: inherit; }
+.brand-name { font-weight: 300; letter-spacing: .32em; white-space: nowrap; font-size: .95rem; color: var(--gold-hi); direction: ltr; text-align: right; }
 .brand-sub { font-size: .74rem; color: var(--muted); letter-spacing: .03em; }
 
 .hero {
