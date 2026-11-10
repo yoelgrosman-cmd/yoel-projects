@@ -83,6 +83,7 @@
 
     <div id="touchView" class="touch-wrap" hidden>
       <div id="touchScroll" class="touch-scroll"><canvas id="touchCanvas"></canvas></div>
+      <div id="touchBusy" class="busy" hidden><div class="spinner"></div><div class="busy-text">מסיר רקע מתוך הסימון…</div></div>
     </div>
 
     <div id="adjControls" class="controls">
@@ -110,9 +111,10 @@
         <p class="hint">גרור את הצל על התמונה כדי להזיז אותו. "מפוצל" שם צל נפרד מתחת לכל נקודת מגע, למשל כל גלגל. <button id="shReset" type="button" class="link-btn">איפוס צל</button></p>
       </div>
       <div class="row">
+        <button id="btnLasso" class="btn">✏️ סמן את המוצר</button>
         <button id="btnTouch" class="btn">🖌️ תיקון ידני</button>
-        <button id="btnRedo" class="btn ghost">הסר רקע מחדש</button>
       </div>
+      <button id="btnRedo" class="btn ghost">הסר רקע מחדש (אוטומטי)</button>
       <div class="row">
         <button id="btnDownload" class="btn primary">⬇ הורד</button>
         <button id="btnShare" class="btn">שתף</button>
@@ -121,17 +123,18 @@
 
     <div id="touchControls" class="controls" hidden>
       <div class="seg">
+        <button data-mode="lasso" class="seg-btn">הקפה</button>
         <button data-mode="erase" class="seg-btn">מחק</button>
         <button data-mode="restore" class="seg-btn">שחזר</button>
         <button data-mode="pan" class="seg-btn">הזזה</button>
       </div>
-      <label class="slider">גודל מברשת <output id="brushVal">30</output>
+      <label id="brushRow" class="slider">גודל מברשת <output id="brushVal">30</output>
         <input id="brush" type="range" min="4" max="120" step="1" value="30">
       </label>
       <label class="slider">זום <output id="zoomVal">1×</output>
         <input id="zoom" type="range" min="1" max="5" step="0.5" value="1">
       </label>
-      <p class="hint">אזורים באדום יוסרו. "מחק" מסיר שאריות רקע, "שחזר" מחזיר חלקים של המוצר.</p>
+      <p id="touchHint" class="hint"></p>
       <div class="row">
         <button id="touchUndo" class="btn">↶ בטל</button>
         <button id="touchDone" class="btn primary">סיום</button>

@@ -98,7 +98,7 @@ main { padding: 16px; max-width: 760px; margin: 0 auto; padding-bottom: 110px; }
 .spinner { width: 38px; height: 38px; border: 4px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.touch-wrap { flex: 1; min-height: 0; padding: 8px; display: flex; }
+.touch-wrap { flex: 1; min-height: 0; padding: 8px; display: flex; position: relative; }
 .touch-scroll { flex: 1; overflow: auto; background: repeating-conic-gradient(#e9ecf1 0 25%, #fff 0 50%) 0 0 / 20px 20px; border-radius: 8px; }
 #touchCanvas { display: block; margin: 0 auto; touch-action: none; }
 .touch-scroll.pan #touchCanvas { touch-action: auto; }
@@ -119,6 +119,7 @@ main { padding: 16px; max-width: 760px; margin: 0 auto; padding-bottom: 110px; }
 .seg-btn, .sh-btn { flex: 1; border: 0; background: transparent; padding: 8px; border-radius: 8px; font-weight: 600; }
 .seg-btn.active, .sh-btn.active { background: var(--card); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .seg-btn[data-mode="erase"].active { color: var(--danger); }
+.seg-btn[data-mode="lasso"].active { color: var(--accent); }
 
 /* Settings sheet */
 .sheet { border: 0; border-radius: 18px; padding: 0; width: min(440px, calc(100vw - 32px)); }

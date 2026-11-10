@@ -180,6 +180,43 @@ async function segment(base) {
   return mask;
 }
 
+// Run the model on part of the image and return a full-size mask.
+// Everything outside the region (and outside the polygon, if given) is removed.
+async function segmentRegion(base, r, poly) {
+  // The model sees the region in its natural context (masking it to white makes the
+  // outline itself look like an object); the polygon is applied afterwards as a hard limit.
+  const region = makeCanvas(r.w, r.h);
+  ctx2d(region).drawImage(base, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+  const m = await segment(region);
+  const full = makeCanvas(base.width, base.height), f = ctx2d(full);
+  f.drawImage(m, r.x, r.y);
+  if (poly) {
+    f.globalCompositeOperation = 'destination-in';
+    f.fillStyle = '#000'; tracePoly(f, poly, 0, 0); f.fill();
+  }
+  return full;
+}
+function tracePoly(x, poly, ox, oy) {
+  x.beginPath();
+  poly.forEach((p, i) => (i ? x.lineTo(p.x + ox, p.y + oy) : x.moveTo(p.x + ox, p.y + oy)));
+  x.closePath();
+}
+function padRect(bb, pad, W, H) {
+  const x0 = Math.max(0, Math.floor(bb.x - pad)), y0 = Math.max(0, Math.floor(bb.y - pad));
+  const x1 = Math.min(W, Math.ceil(bb.x + bb.w + pad)), y1 = Math.min(H, Math.ceil(bb.y + bb.h + pad));
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+// Two passes: find the product, then zoom in on it and run again for cleaner edges
+// and fewer leftovers from the surroundings.
+async function segmentRefined(base) {
+  const m1 = await segment(base);
+  const bb = maskBBox(m1);
+  const W = base.width, H = base.height;
+  if (bb.w < 16 || bb.h < 16 || bb.w * bb.h > 0.75 * W * H) return m1;
+  const r = padRect(bb, 0.08 * Math.max(bb.w, bb.h), W, H);
+  return segmentRegion(base, r, null);
+}
+
 // ---------------- adjustments & compose ----------------
 function adjustedBase(item) {
   const { brightness: b, contrast: k } = item.adj;
@@ -350,7 +387,7 @@ async function processItem(item, { force = false } = {}) {
   try {
     await ensureBase(item);
     if (!item.mask || force) {
-      item.mask = await segment(item.base);
+      item.mask = await segmentRefined(item.base);
       item.bbox = null;
     }
     await renderOutput(item);
@@ -642,18 +679,24 @@ function setTouchMode(on) {
   $('#resultView').hidden = on; $('#adjControls').hidden = on;
   $('#touchView').hidden = !on; $('#touchControls').hidden = !on;
 }
-$('#btnTouch').onclick = () => {
+function openTouch(m) {
   undoStack = [];
   setTouchMode(true);
-  setMode('erase');
+  setMode(m);
   tc.width = cur.base.width; tc.height = cur.base.height;
   applyZoom();
   drawTouch();
-};
+}
+$('#btnTouch').onclick = () => openTouch('erase');
+$('#btnLasso').onclick = () => openTouch('lasso');
 function setMode(m) {
   mode = m;
   $$('.seg-btn').forEach((b) => b.classList.toggle('active', b.dataset.mode === m));
   $('#touchScroll').classList.toggle('pan', m === 'pan');
+  $('#brushRow').hidden = m === 'lasso' || m === 'pan';
+  $('#touchHint').textContent = m === 'lasso'
+    ? 'הקף את כל המוצר באצבע בקו אחד רציף, עם קצת רווח מסביב. לא צריך להיות מדויק, אבל כל מה שמחוץ לקו יוסר (למשל יד או תווית).'
+    : 'אזורים באדום יוסרו. "מחק" מסיר שאריות רקע, "שחזר" מחזיר חלקים של המוצר.';
 }
 $$('.seg-btn').forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
 
@@ -682,6 +725,15 @@ function drawTouch() {
   o.globalCompositeOperation = 'destination-out';
   o.drawImage(cur.mask, 0, 0);
   x.drawImage(ov, 0, 0);
+  if (lassoPts && lassoPts.length > 1) {
+    const k = tc.width / tc.getBoundingClientRect().width;
+    x.save();
+    tracePoly(x, lassoPts, 0, 0);
+    x.fillStyle = 'rgba(47,124,246,0.12)'; x.fill();
+    x.lineWidth = 3 * k; x.strokeStyle = '#fff'; x.stroke();
+    x.setLineDash([8 * k, 6 * k]); x.strokeStyle = '#2f7cf6'; x.stroke();
+    x.restore();
+  }
 }
 function queueDraw() { if (!drawQueued) { drawQueued = true; requestAnimationFrame(drawTouch); } }
 
@@ -708,17 +760,52 @@ function strokeTo(p) {
   }
   lastPt = p;
 }
-tc.addEventListener('pointerdown', (e) => {
-  if (mode === 'pan' || !touchOn) return;
-  e.preventDefault();
-  tc.setPointerCapture(e.pointerId);
-  painting = true; lastPt = null;
+let lassoPts = null, lassoBusy = false;
+function pushUndo() {
   const snap = makeCanvas(cur.mask.width, cur.mask.height); ctx2d(snap).drawImage(cur.mask, 0, 0);
   undoStack.push(snap); if (undoStack.length > 4) undoStack.shift();
+}
+async function applyLasso(pts) {
+  const W = cur.base.width, H = cur.base.height;
+  let x0 = W, y0 = H, x1 = 0, y1 = 0;
+  for (const p of pts) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+  if (x1 - x0 < 20 || y1 - y0 < 20) { lassoPts = null; drawTouch(); toast('הקו קטן מדי, נסה שוב'); return; }
+  lassoBusy = true; $('#touchBusy').hidden = false;
+  await nextFrame();
+  try {
+    pushUndo();
+    const r = padRect({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 }, 2, W, H);
+    const m = await segmentRegion(cur.base, r, pts);
+    const mx = ctx2d(cur.mask); mx.clearRect(0, 0, W, H); mx.drawImage(m, 0, 0);
+    cur.bbox = null;
+    setMode('erase');
+    toast('בוצע. אפשר להמשיך לתקן במברשת או ללחוץ "סיום"');
+  } catch (e) { console.error(e); toast('שגיאה: ' + (e.message || e), 5000); }
+  lassoBusy = false; lassoPts = null; $('#touchBusy').hidden = true;
+  drawTouch();
+}
+tc.addEventListener('pointerdown', (e) => {
+  if (mode === 'pan' || !touchOn || lassoBusy) return;
+  e.preventDefault();
+  tc.setPointerCapture(e.pointerId);
+  if (mode === 'lasso') { const p = toCanvasPt(e); lassoPts = [{ x: p.x, y: p.y }]; painting = true; queueDraw(); return; }
+  painting = true; lastPt = null;
+  pushUndo();
   strokeTo(toCanvasPt(e)); queueDraw();
 });
-tc.addEventListener('pointermove', (e) => { if (!painting) return; strokeTo(toCanvasPt(e)); queueDraw(); });
-const endStroke = () => { painting = false; lastPt = null; };
+tc.addEventListener('pointermove', (e) => {
+  if (!painting) return;
+  const p = toCanvasPt(e);
+  if (mode === 'lasso') {
+    const l = lassoPts[lassoPts.length - 1];
+    if (Math.hypot(p.x - l.x, p.y - l.y) > 3 * p.k) lassoPts.push({ x: p.x, y: p.y });
+  } else strokeTo(p);
+  queueDraw();
+});
+const endStroke = () => {
+  painting = false; lastPt = null;
+  if (mode === 'lasso' && lassoPts) { if (lassoPts.length > 8) applyLasso(lassoPts); else { lassoPts = null; drawTouch(); } }
+};
 tc.addEventListener('pointerup', endStroke);
 tc.addEventListener('pointercancel', endStroke);
 

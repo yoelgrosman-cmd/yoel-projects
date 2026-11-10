@@ -1,6 +1,6 @@
 // App-shell cache so the tool opens fast and works with a weak connection.
 // The model itself is cached separately by app.js (Cache Storage "studio-model").
-const CACHE = 'studio-shell-v2';
+const CACHE = 'studio-shell-v3';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon.svg',
   'vendor/cropper.min.js', 'vendor/cropper.min.css', 'vendor/fflate.mjs',
   'vendor/ort.webgpu.bundle.min.mjs', 'vendor/ort-wasm-simd-threaded.jsep.mjs', 'vendor/ort-wasm-simd-threaded.jsep.wasm'];
